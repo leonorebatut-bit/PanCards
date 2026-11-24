@@ -11,6 +11,14 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SOURCE_DIR = path.resolve(process.cwd(), 'Pancartes');
 const BUCKET_NAME = 'pancartes';
 
+const MIME_BY_EXT: Record<string, string> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.avif': 'image/avif',
+};
+
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   console.error(
     'Erreur : VITE_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY doivent être définis dans .env'
@@ -22,7 +30,7 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });
 
-// Tri naturel : pancarte1.jpg, pancarte2.jpg, ..., pancarte10.jpg
+// Tri naturel : pancarte1, pancarte2, ..., pancarte10
 function naturalCompare(a: string, b: string): number {
   return a.localeCompare(b, 'fr', { numeric: true, sensitivity: 'base' });
 }
@@ -38,16 +46,19 @@ async function runImport() {
     process.exit(1);
   }
 
-  const jpgFiles = entries
-    .filter((file) => /\.(jpe?g)$/i.test(file))
+  const imageFiles = entries
+    .filter((file) => {
+      const ext = path.extname(file).toLowerCase();
+      return ext in MIME_BY_EXT;
+    })
     .sort(naturalCompare);
 
-  if (jpgFiles.length === 0) {
-    console.log('Aucun fichier JPG trouvé dans le dossier Pancartes.');
+  if (imageFiles.length === 0) {
+    console.log('Aucun fichier image compatible (JPG, PNG, WEBP, AVIF) trouvé dans Pancartes/.');
     return;
   }
 
-  console.log(`${jpgFiles.length} fichiers JPG détectés.\n`);
+  console.log(`${imageFiles.length} fichiers image détectés.\n`);
 
   // Récupération des noms de fichiers déjà importés pour éviter tout doublon
   const { data: existingRows, error: fetchError } = await supabase
@@ -67,7 +78,7 @@ async function runImport() {
   let skippedCount = 0;
   const failedFiles: { file: string; reason: string }[] = [];
 
-  for (const filename of jpgFiles) {
+  for (const filename of imageFiles) {
     if (existingSet.has(filename.toLowerCase())) {
       skippedCount++;
       console.log(`[IGNORÉ - DÉJÀ PRÉSENT] ${filename}`);
@@ -75,32 +86,28 @@ async function runImport() {
     }
 
     const fullPath = path.join(SOURCE_DIR, filename);
+    const ext = path.extname(filename).toLowerCase();
+    const originalContentType = MIME_BY_EXT[ext] ?? 'application/octet-stream';
 
     try {
       const originalBuffer = await fs.readFile(fullPath);
 
-      // Génération de la miniature (largeur max 480px, orientation EXIF préservée)
+      // Génération de la miniature en JPEG (largeur max 480px, orientation EXIF préservée)
       const thumbBuffer = await sharp(originalBuffer)
         .rotate()
         .resize({ width: 480, withoutEnlargement: true })
         .jpeg({ quality: 80, progressive: true })
         .toBuffer();
 
-      // Normalisation de l'original (correction orientation EXIF sans perte notable)
-      const normalizedOriginal = await sharp(originalBuffer)
-        .rotate()
-        .jpeg({ quality: 92 })
-        .toBuffer();
-
       const baseSlug = path.parse(filename).name.replace(/[^a-zA-Z0-9_-]/g, '_');
-      const originalStoragePath = `originals/${baseSlug}.jpg`;
+      const originalStoragePath = `originals/${baseSlug}${ext}`;
       const thumbStoragePath = `thumbs/${baseSlug}_thumb.jpg`;
 
-      // 1. Upload de l'image originale
+      // 1. Upload du fichier original intact
       const { error: origUploadError } = await supabase.storage
         .from(BUCKET_NAME)
-        .upload(originalStoragePath, normalizedOriginal, {
-          contentType: 'image/jpeg',
+        .upload(originalStoragePath, originalBuffer, {
+          contentType: originalContentType,
           upsert: true,
         });
 
