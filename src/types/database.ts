@@ -54,3 +54,30 @@ export interface ShowcaseItem {
   position: number;
   card: Card;
 }
+export interface BoosterDrawnCard {
+  user_card_id: string;
+  card_id: number;
+  original_filename: string;
+  image_url: string;
+  thumb_url: string;
+  description: string | null;
+  extra_info: string | null;
+  is_new_to_collection: boolean;
+}
+
+export interface PoubelleTransaction {
+  id: string;
+  user_id: string;
+  amount: number;
+  balance_after: number;
+  operation_type:
+    | 'signup_bonus'
+    | 'discard_card'
+    | 'rate_card'
+    | 'comment_card'
+    | 'submission_approved'
+    | 'buy_booster'
+    | 'admin_adjustment';
+  card_id: number | null;
+  created_at: string;
+}
