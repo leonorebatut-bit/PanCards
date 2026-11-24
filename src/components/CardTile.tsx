@@ -1,37 +1,29 @@
+import { Link } from 'react-router-dom';
 import type { Card } from '../types/database';
 
-interface CardTileProps {
-  card: Card;
-}
-
-export function CardTile({ card }: CardTileProps) {
-  const formattedId = `N° ${String(card.id).padStart(4, '0')}`;
-
+export function CardTile({ card }: { card: Card }) {
   return (
-    <article className="pancarte-card">
+    <Link to={`/pancarte/${card.id}`} className="pancarte-card" style={{ display: 'block' }}>
       <div className="pancarte-card-top">
-        <span>{formattedId}</span>
-        <span>{card.original_filename}</span>
+        <span>N° {String(card.id).padStart(4, '0')}</span>
+        <span>VOIR LA FICHE →</span>
       </div>
-
       <div className="pancarte-card-img-wrap">
         <img
           src={card.thumb_url}
-          alt={card.description || `Pancarte d'archive ${formattedId}`}
+          alt={card.original_filename}
           className="pancarte-card-img"
           loading="lazy"
         />
       </div>
-
       <div className="pancarte-card-body">
-        {card.description ? (
-          <p style={{ margin: 0 }}>{card.description}</p>
-        ) : (
-          <span className="pancarte-card-empty-desc">
-            Aucune légende enregistrée pour le moment.
-          </span>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
+          {card.original_filename}
+        </div>
+        {card.description && (
+          <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem' }}>{card.description}</p>
         )}
       </div>
-    </article>
+    </Link>
   );
 }
