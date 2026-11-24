@@ -593,3 +593,59 @@ export function CollectionPage() {
     </div>
   );
 }
+const { user, loading: authLoading, refreshProfile } = useAuth();
+const handleDiscardDuplicatesOfSelection = async () => {
+  if (!user || selectedCardIds.length === 0) return;
+
+  // Ne défausse par défaut que les exemplaires en surplus (garde 1 exemplaire par carte)
+  const copyIdsToDiscard: string[] = [];
+  for (const entry of groupedCards) {
+    if (selectedCardIds.includes(entry.card.id) && entry.copies.length > 1) {
+      // On garde le plus ancien exemplaire (index 0) et on défausse les doublons
+      for (let i = 1; i < entry.copies.length; i++) {
+        copyIdsToDiscard.push(entry.copies[i].id);
+      }
+    }
+  }
+
+  if (copyIdsToDiscard.length === 0) {
+    setFeedback(
+      'Aucun doublon en surplus dans ta sélection (seuls les exemplaires en double sont défaussés par cette action).'
+    );
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Défausser ${copyIdsToDiscard.length} doublon(s) pour gagner +${
+      copyIdsToDiscard.length * 10
+    } poubelles ? Cette action est irréversible.`
+  );
+  if (!confirmed) return;
+
+  const { data, error } = await supabase.rpc('discard_user_cards', {
+    p_user_card_ids: copyIdsToDiscard,
+  });
+
+  if (error) {
+    setFeedback(`Erreur lors de la défausse : ${error.message}`);
+  } else {
+    const res = Array.isArray(data) ? data[0] : null;
+    setFeedback(
+      res
+        ? `${res.discarded_count} doublon(s) défaussé(s) (+${res.total_earned} poubelles).`
+        : 'Doublons défaussés.'
+    );
+    setSelectedCardIds([]);
+    await loadAllCollectionData(user.id);
+    await refreshProfile();
+  }
+};
+{selectedCardIds.length > 0 && (
+  <button
+    type="button"
+    className="btn-danger"
+    onClick={handleDiscardDuplicatesOfSelection}
+  >
+    Défausser les doublons de la sélection (+10 / carte)
+  </button>
+)}
