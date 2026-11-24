@@ -333,3 +333,127 @@ select {
   flex-wrap: wrap;
   gap: 0.75rem;
 }
+/* Formulaires et panneaux éditoriaux */
+.panel-box {
+  border: var(--border-thick);
+  background-color: var(--color-white);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-hard);
+  margin-bottom: 1.5rem;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.field-label {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.field-input,
+.field-textarea,
+.field-select {
+  width: 100%;
+  border: var(--border-thick);
+  background-color: var(--color-paper);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.95rem;
+  color: var(--color-black);
+}
+
+.field-textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.btn-secondary {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  background-color: var(--color-white);
+  color: var(--color-black);
+  border: var(--border-thick);
+  padding: 0.55rem 0.95rem;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-gray-100);
+}
+
+.btn-danger {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  background-color: var(--color-black);
+  color: var(--color-white);
+  border: var(--border-thick);
+  padding: 0.55rem 0.95rem;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  background-color: var(--color-red);
+}
+
+.badge-dup {
+  background-color: var(--color-red);
+  color: var(--color-white);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.12rem 0.4rem;
+}
+
+.badge-unique {
+  background-color: var(--color-gray-100);
+  color: var(--color-black);
+  border: 1px solid var(--color-black);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.12rem 0.4rem;
+}
+
+.toolbar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1.5rem;
+}
+
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 1rem;
+}
+
+.alert-error {
+  border: 2px solid var(--color-red);
+  background-color: var(--color-red-tint);
+  color: var(--color-black);
+  padding: 0.85rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.alert-ok {
+  border: 2px solid var(--color-black);
+  background-color: var(--color-gray-100);
+  color: var(--color-black);
+  padding: 0.85rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
