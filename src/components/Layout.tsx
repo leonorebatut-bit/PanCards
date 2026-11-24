@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Accueil' },
@@ -12,7 +14,31 @@ const NAV_ITEMS = [
 ];
 
 export function Layout() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
+  const [liveBoosters, setLiveBoosters] = useState<number | null>(null);
+  const [livePoubelles, setLivePoubelles] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setLiveBoosters(null);
+      setLivePoubelles(null);
+      return;
+    }
+
+    supabase.rpc('sync_user_boosters').then(({ data, error }) => {
+      if (!error && Array.isArray(data) && data[0]) {
+        const row = data[0] as {
+          boosters_available: number;
+          poubelles_balance: number;
+        };
+        setLiveBoosters(row.boosters_available);
+        setLivePoubelles(row.poubelles_balance);
+      }
+    });
+  }, [user, profile?.poubelles, profile?.boosters_stored]);
+
+  const displayedBoosters = liveBoosters ?? profile?.boosters_stored ?? 0;
+  const displayedPoubelles = livePoubelles ?? profile?.poubelles ?? 0;
 
   return (
     <div>
@@ -49,8 +75,8 @@ export function Layout() {
           </span>
           <span>
             {profile
-              ? `POUBELLES : ${profile.poubelles} · BOOSTERS : ${profile.boosters_stored}/8`
-              : 'PHASE 2 : COMPTES & COLLECTIONS'}
+              ? `POUBELLES : ${displayedPoubelles} · BOOSTERS : ${displayedBoosters}/8`
+              : 'PHASE 3 : BOOSTERS & ÉCONOMIE'}
           </span>
         </div>
       </div>
