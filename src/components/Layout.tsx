@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Accueil' },
@@ -11,6 +12,8 @@ const NAV_ITEMS = [
 ];
 
 export function Layout() {
+  const { profile } = useAuth();
+
   return (
     <div>
       <header className="site-header">
@@ -39,8 +42,16 @@ export function Layout() {
 
       <div className="status-strip">
         <div className="status-strip-inner">
-          <span>ÉDITION ARCHIVE — PHASE 1 : CATALOGUE INITIAL</span>
-          <span>CONNEXION REQUISE POUR BOOSTERS &amp; POUBELLES (PHASE 2)</span>
+          <span>
+            {profile
+              ? `CONNECTÉ : @${profile.username} (${profile.is_public ? 'PUBLIC' : 'PRIVÉ'})`
+              : 'VISITEUR NON CONNECTÉ'}
+          </span>
+          <span>
+            {profile
+              ? `POUBELLES : ${profile.poubelles} · BOOSTERS : ${profile.boosters_stored}/8`
+              : 'PHASE 2 : COMPTES & COLLECTIONS'}
+          </span>
         </div>
       </div>
 
