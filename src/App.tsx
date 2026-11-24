@@ -1,24 +1,21 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import { Layout } from './components/Layout';
 import { HomePage } from './pages/HomePage';
+import { ProfilePage } from './pages/ProfilePage';
+import { CollectionPage } from './pages/CollectionPage';
+import { CommunityPage } from './pages/CommunityPage';
+import { PublicProfilePage } from './pages/PublicProfilePage';
 
 function PhasePlaceholder({ title, phase }: { title: string; phase: string }) {
   return (
-    <section
-      style={{
-        border: '2px solid var(--color-black)',
-        backgroundColor: 'var(--color-white)',
-        padding: '2rem',
-        boxShadow: '4px 4px 0px var(--color-black)',
-      }}
-    >
+    <section className="panel-box">
       <span className="hero-kicker">{phase}</span>
       <h2 className="hero-headline" style={{ fontSize: '1.8rem' }}>
         {title}
       </h2>
       <p style={{ marginBottom: 0 }}>
-        Ce module est prévu dans la feuille de route et sera connecté à la base
-        de données lors de la phase correspondante.
+        Ce module sera connecté à la base lors de la phase suivante.
       </p>
     </section>
   );
@@ -26,36 +23,34 @@ function PhasePlaceholder({ title, phase }: { title: string; phase: string }) {
 
 export function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<HomePage />} />
-          <Route
-            path="booster"
-            element={<PhasePlaceholder title="Ouvrir un booster" phase="Phase 3 : Jeu" />}
-          />
-          <Route
-            path="collection"
-            element={<PhasePlaceholder title="Ma collection" phase="Phase 2 : Comptes et collections" />}
-          />
-          <Route
-            path="ajouter"
-            element={<PhasePlaceholder title="Ajouter ma pancarte" phase="Phase 4 : Contributions" />}
-          />
-          <Route
-            path="echanges"
-            element={<PhasePlaceholder title="Échanges entre joueurs" phase="Phase 5 : Communauté" />}
-          />
-          <Route
-            path="communaute"
-            element={<PhasePlaceholder title="Profils et communauté" phase="Phase 5 : Communauté" />}
-          />
-          <Route
-            path="profil"
-            element={<PhasePlaceholder title="Mon profil" phase="Phase 2 : Comptes et collections" />}
-          />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<HomePage />} />
+            <Route
+              path="booster"
+              element={<PhasePlaceholder title="Ouvrir un booster" phase="Phase 3 : Jeu" />}
+            />
+            <Route path="collection" element={<CollectionPage />} />
+            <Route
+              path="ajouter"
+              element={
+                <PhasePlaceholder title="Ajouter ma pancarte" phase="Phase 4 : Contributions" />
+              }
+            />
+            <Route
+              path="echanges"
+              element={
+                <PhasePlaceholder title="Échanges entre joueurs" phase="Phase 5 : Communauté" />
+              }
+            />
+            <Route path="communaute" element={<CommunityPage />} />
+            <Route path="communaute/:userId" element={<PublicProfilePage />} />
+            <Route path="profil" element={<ProfilePage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
