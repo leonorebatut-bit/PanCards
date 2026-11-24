@@ -24,3 +24,33 @@ export interface Profile {
   is_suspended: boolean;
   created_at: string;
 }
+
+export interface UserCardCopy {
+  id: string;
+  user_id: string;
+  card_id: number;
+  acquired_at: string;
+  source: 'booster' | 'trade' | 'admin' | 'starter';
+  card: Card;
+}
+
+export interface CollectionFolder {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string;
+  created_at: string;
+}
+
+export interface CollectionCardLink {
+  collection_id: string;
+  card_id: number;
+  added_at: string;
+}
+
+export interface ShowcaseItem {
+  user_id: string;
+  card_id: number;
+  position: number;
+  card: Card;
+}
