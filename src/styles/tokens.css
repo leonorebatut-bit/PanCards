@@ -1,0 +1,27 @@
+:root {
+  /* Palette : Rouge militant, noir d'encre, blanc papier d'archive */
+  --color-red: #c8102e;
+  --color-red-dark: #94081e;
+  --color-red-tint: #f9e6e9;
+  --color-black: #0e0e0e;
+  --color-paper: #f6f3ec;
+  --color-white: #ffffff;
+  --color-gray-100: #ebe6dc;
+  --color-gray-300: #c5bfb3;
+  --color-gray-600: #59554e;
+
+  /* Typographie */
+  --font-display: 'Archivo Black', Impact, sans-serif;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  /* Bordures franches et grille */
+  --border-thin: 1px solid var(--color-black);
+  --border-thick: 2px solid var(--color-black);
+  --border-red: 2px solid var(--color-red);
+  --shadow-hard: 4px 4px 0px var(--color-black);
+  --shadow-hard-red: 4px 4px 0px var(--color-red);
+
+  /* Espacements */
+  --container-max: 1320px;
+}
