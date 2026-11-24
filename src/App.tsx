@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { Layout } from './components/Layout';
 import { HomePage } from './pages/HomePage';
+import { BoosterPage } from './pages/BoosterPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { CollectionPage } from './pages/CollectionPage';
 import { CommunityPage } from './pages/CommunityPage';
@@ -28,10 +29,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
-            <Route
-              path="booster"
-              element={<PhasePlaceholder title="Ouvrir un booster" phase="Phase 3 : Jeu" />}
-            />
+            <Route path="booster" element={<BoosterPage />} />
             <Route path="collection" element={<CollectionPage />} />
             <Route
               path="ajouter"
