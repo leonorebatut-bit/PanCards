@@ -7,6 +7,8 @@ import { ProfilePage } from './pages/ProfilePage';
 import { CollectionPage } from './pages/CollectionPage';
 import { CommunityPage } from './pages/CommunityPage';
 import { PublicProfilePage } from './pages/PublicProfilePage';
+import { CardDetailPage } from './pages/CardDetailPage';
+import { AddPancartePage } from './pages/AddPancartePage';
 
 function PhasePlaceholder({ title, phase }: { title: string; phase: string }) {
   return (
@@ -31,12 +33,8 @@ export function App() {
             <Route index element={<HomePage />} />
             <Route path="booster" element={<BoosterPage />} />
             <Route path="collection" element={<CollectionPage />} />
-            <Route
-              path="ajouter"
-              element={
-                <PhasePlaceholder title="Ajouter ma pancarte" phase="Phase 4 : Contributions" />
-              }
-            />
+            <Route path="ajouter" element={<AddPancartePage />} />
+            <Route path="pancarte/:cardId" element={<CardDetailPage />} />
             <Route
               path="echanges"
               element={
