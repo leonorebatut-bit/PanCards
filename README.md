@@ -30,3 +30,23 @@ pan-cards/
     │   └── CardTile.tsx
     └── pages/
         └── HomePage.tsx
+
+
+
+        # PAN-CARDS
+
+Archive photographique collaborative de pancartes de manifestations transformée en jeu de cartes à collectionner.
+
+## Stack technique (100 % hébergeable gratuitement)
+- **Frontend :** React 18, TypeScript, Vite, CSS personnalisé
+- **Backend & Base de données :** Supabase (PostgreSQL, Auth, Storage, Row Level Security)
+- **Hébergement :** Cloudflare Pages
+- **Versionnement :** GitHub
+
+---
+
+## Installation locale
+
+1. Cloner le dépôt et installer les dépendances :
+   ```bash
+   npm install
