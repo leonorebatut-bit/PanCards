@@ -81,3 +81,21 @@ export interface PoubelleTransaction {
   card_id: number | null;
   created_at: string;
 }
+export interface CardRatingSummary {
+  vote_count: number;
+  average_stars: number | null;
+  is_public_average: boolean;
+  user_stars: number | null;
+}
+
+export interface CardComment {
+  id: string;
+  user_id: string;
+  card_id: number;
+  content: string;
+  created_at: string;
+  author?: {
+    username: string;
+    avatar_url: string | null;
+  } | null;
+}
