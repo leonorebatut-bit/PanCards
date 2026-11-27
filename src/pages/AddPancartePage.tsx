@@ -217,7 +217,7 @@ export function AddPancartePage() {
         <h2 className="hero-headline" style={{ fontSize: '1.6rem' }}>
           Connexion requise
         </h2>
-        <p>Connecte-toi pour proposer une photographie de pancarte à l&apos;archive.</p>
+        <p>Connecte-toi pour créer une nouvelle carte à partir de ta photo de pancarte.</p>
         <Link to="/profil" className="btn-primary">
           Se connecter →
         </Link>
