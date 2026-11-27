@@ -11,10 +11,17 @@
 
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 
--- Tables et vues : lecture pour les visiteurs, lecture/écriture (filtrée par
--- RLS) pour les membres connectés
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+-- Lecture (filtrée par RLS) pour les visiteurs et les membres connectés
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+
+-- Écriture directe uniquement là où le site écrit lui-même ; tout le reste
+-- (boosters, notes, commentaires, vitrine, propositions…) passe par les
+-- fonctions sécurisées de 002 et 003.
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
+GRANT UPDATE ON public.profiles TO authenticated;
+GRANT DELETE ON public.comments TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.collections TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.collection_cards TO authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
 -- Exception conservée (002) : statistiques brutes des notes, accessibles
@@ -39,7 +46,9 @@ GRANT EXECUTE ON FUNCTION public.moderate_pancarte(INTEGER, TEXT, TEXT, TEXT) TO
 GRANT EXECUTE ON FUNCTION public.ensure_my_profile() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_card_rating_summary(INTEGER) TO anon, authenticated;
 
--- Tables créées plus tard : mêmes droits par défaut
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO anon;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO authenticated;
+-- Pas de droits par défaut pour les tables créées plus tard : chaque
+-- nouvelle table devra activer RLS puis recevoir ses droits explicitement.
+-- (annule les droits par défaut d'une version précédente de ce script)
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT, INSERT, UPDATE, DELETE ON TABLES FROM authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE USAGE, SELECT ON SEQUENCES FROM authenticated;
