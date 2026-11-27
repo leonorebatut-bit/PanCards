@@ -36,6 +36,40 @@ $$;
 
 CREATE INDEX IF NOT EXISTS idx_trade_items_user_card ON public.trade_items(user_card_id);
 
+-- Historique : on garde le numéro de la pancarte échangée, même si
+-- l'exemplaire est défaussé plus tard (l'élément n'est plus supprimé avec lui)
+ALTER TABLE public.trade_items ADD COLUMN IF NOT EXISTS card_id INTEGER REFERENCES public.cards(id) ON DELETE CASCADE;
+UPDATE public.trade_items ti SET card_id = uc.card_id
+FROM public.user_cards uc
+WHERE uc.id = ti.user_card_id AND ti.card_id IS NULL;
+ALTER TABLE public.trade_items ALTER COLUMN user_card_id DROP NOT NULL;
+
+DO $$
+DECLARE
+  c RECORD;
+BEGIN
+  FOR c IN
+    SELECT conname FROM pg_constraint
+    WHERE conrelid = 'public.trade_items'::regclass
+      AND confrelid = 'public.user_cards'::regclass
+      AND contype = 'f'
+      AND confdeltype <> 'n'
+  LOOP
+    EXECUTE format('ALTER TABLE public.trade_items DROP CONSTRAINT %I', c.conname);
+  END LOOP;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.trade_items'::regclass
+      AND confrelid = 'public.user_cards'::regclass
+      AND contype = 'f'
+  ) THEN
+    ALTER TABLE public.trade_items
+      ADD CONSTRAINT trade_items_user_card_id_fkey
+      FOREIGN KEY (user_card_id) REFERENCES public.user_cards(id) ON DELETE SET NULL;
+  END IF;
+END;
+$$;
+
 -- RLS déjà active sur ces tables (001) ; on le réaffirme par sécurité
 ALTER TABLE public.trades ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trade_items ENABLE ROW LEVEL SECURITY;
@@ -75,13 +109,23 @@ BEGIN
     RAISE EXCEPTION 'Choisis un autre joueur.';
   END IF;
 
-  SELECT id, username, is_suspended INTO v_receiver
+  -- Verrous dans un ordre fixe : les vérifications ci-dessous ne peuvent pas
+  -- croiser un échange en train d'être accepté, ni une défausse
+  PERFORM 1 FROM public.profiles
+  WHERE id IN (v_uid, p_receiver_id)
+  ORDER BY id
+  FOR UPDATE;
+
+  SELECT id, username, is_suspended, is_public INTO v_receiver
   FROM public.profiles WHERE id = p_receiver_id;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Ce joueur n''existe pas.';
   END IF;
   IF v_receiver.is_suspended THEN
     RAISE EXCEPTION 'Ce joueur ne peut pas échanger pour le moment.';
+  END IF;
+  IF cardinality(v_requested) > 0 AND NOT v_receiver.is_public THEN
+    RAISE EXCEPTION 'Ce joueur garde sa collection privée : tu peux seulement lui offrir des cartes.';
   END IF;
 
   IF cardinality(v_offered) + cardinality(v_requested) = 0 THEN
@@ -120,10 +164,11 @@ BEGIN
   VALUES (v_uid, p_receiver_id, v_message, cardinality(v_offered) + cardinality(v_requested))
   RETURNING id INTO v_trade_id;
 
-  INSERT INTO public.trade_items (trade_id, user_card_id, direction)
-  SELECT v_trade_id, x, 'offered' FROM unnest(v_offered) x
-  UNION ALL
-  SELECT v_trade_id, x, 'requested' FROM unnest(v_requested) x;
+  INSERT INTO public.trade_items (trade_id, user_card_id, card_id, direction)
+  SELECT v_trade_id, uc.id, uc.card_id,
+         CASE WHEN uc.id = ANY (v_offered) THEN 'offered' ELSE 'requested' END
+  FROM public.user_cards uc
+  WHERE uc.id = ANY (v_offered || v_requested);
 
   SELECT username INTO v_proposer_name FROM public.profiles WHERE id = v_uid;
   INSERT INTO public.notifications (user_id, type, title, body)
@@ -156,10 +201,19 @@ DECLARE
   v_receiver_name TEXT;
   v_other RECORD;
 BEGIN
-  SELECT * INTO v_trade FROM public.trades WHERE id = p_trade_id FOR UPDATE;
+  SELECT * INTO v_trade FROM public.trades WHERE id = p_trade_id;
   IF NOT FOUND OR v_trade.receiver_id <> v_uid THEN
     RAISE EXCEPTION 'Proposition introuvable.';
   END IF;
+
+  -- Verrous toujours dans le même ordre (profils triés, puis échange, puis
+  -- cartes) : deux acceptations simultanées s'attendent au lieu de se bloquer
+  PERFORM 1 FROM public.profiles
+  WHERE id IN (v_trade.proposer_id, v_trade.receiver_id)
+  ORDER BY id
+  FOR UPDATE;
+
+  SELECT * INTO v_trade FROM public.trades WHERE id = p_trade_id FOR UPDATE;
   IF v_trade.status <> 'pending' THEN
     RAISE EXCEPTION 'Cette proposition a déjà été traitée.';
   END IF;
@@ -179,12 +233,6 @@ BEGIN
   IF EXISTS (SELECT 1 FROM public.profiles WHERE id = v_trade.proposer_id AND is_suspended) THEN
     RAISE EXCEPTION 'L''auteur de cette proposition ne peut plus échanger.';
   END IF;
-
-  -- Verrous dans un ordre fixe (évite les blocages entre deux échanges croisés)
-  PERFORM 1 FROM public.profiles
-  WHERE id IN (v_trade.proposer_id, v_trade.receiver_id)
-  ORDER BY id
-  FOR UPDATE;
 
   PERFORM 1 FROM public.user_cards uc
   JOIN public.trade_items ti ON ti.user_card_id = uc.id
@@ -229,7 +277,8 @@ BEGIN
   );
 
   -- Les autres propositions en attente qui utilisaient ces cartes deviennent caduques
-  SELECT array_agg(user_card_id) INTO v_moved FROM public.trade_items WHERE trade_id = p_trade_id;
+  SELECT array_agg(user_card_id) INTO v_moved FROM public.trade_items
+  WHERE trade_id = p_trade_id AND user_card_id IS NOT NULL;
   FOR v_other IN
     SELECT DISTINCT t.id, t.proposer_id
     FROM public.trades t
@@ -308,7 +357,7 @@ BEGIN
         jsonb_build_object('id', pr.id, 'username', pr.username) AS receiver,
         COALESCE((
           SELECT jsonb_agg(jsonb_build_object(
-            'user_card_id', ti.user_card_id,
+            'user_card_id', COALESCE(ti.user_card_id::text, ti.id::text),
             'direction', ti.direction,
             'card', jsonb_build_object(
               'id', c.id,
@@ -317,17 +366,23 @@ BEGIN
             )
           ) ORDER BY c.id)
           FROM public.trade_items ti
-          JOIN public.user_cards uc ON uc.id = ti.user_card_id
-          JOIN public.cards c ON c.id = uc.card_id
+          JOIN public.cards c ON c.id = ti.card_id
           WHERE ti.trade_id = t.id
         ), '[]'::jsonb) AS items
       FROM public.trades t
       JOIN public.profiles pp ON pp.id = t.proposer_id
       JOIN public.profiles pr ON pr.id = t.receiver_id
-      WHERE (t.proposer_id = v_uid OR t.receiver_id = v_uid)
-        AND (t.status = 'pending' OR COALESCE(t.resolved_at, t.created_at) > now() - interval '60 days')
-      ORDER BY COALESCE(t.resolved_at, t.created_at) DESC
-      LIMIT 100
+      WHERE t.id IN (
+        -- toutes les propositions en attente…
+        SELECT id FROM public.trades
+        WHERE (proposer_id = v_uid OR receiver_id = v_uid) AND status = 'pending'
+        UNION ALL
+        -- …et les 50 derniers échanges terminés
+        (SELECT id FROM public.trades
+         WHERE (proposer_id = v_uid OR receiver_id = v_uid) AND status <> 'pending'
+         ORDER BY COALESCE(resolved_at, created_at) DESC
+         LIMIT 50)
+      )
     ) x
   ), '[]'::jsonb);
 END;
