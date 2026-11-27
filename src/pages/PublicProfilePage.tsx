@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import type { Card, CollectionFolder, Profile, ShowcaseItem } from '../types/database';
@@ -115,6 +115,15 @@ export function PublicProfilePage() {
             ? `Cartes possédées : ${totalCopies} exemplaires (${publicCards.length} pancartes distinctes)`
             : 'Informations de collection privées.'}
         </div>
+        {user && user.id !== targetProfile.id && (
+          <Link
+            to={`/echanges?avec=${targetProfile.id}`}
+            className="btn-primary"
+            style={{ display: 'inline-block', marginTop: '1rem' }}
+          >
+            🔄 Proposer un échange
+          </Link>
+        )}
       </section>
 
       <section className="panel-box">

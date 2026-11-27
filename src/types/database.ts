@@ -100,3 +100,27 @@ export interface CardComment {
     avatar_url: string | null;
   } | null;
 }
+
+export interface TradeCard {
+  id: number;
+  thumb_url: string;
+  description: string | null;
+}
+
+export interface TradeItemView {
+  user_card_id: string;
+  direction: 'offered' | 'requested';
+  card: TradeCard;
+}
+
+/** Échange tel que renvoyé par la fonction get_my_trades() */
+export interface TradeView {
+  id: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'ignored';
+  message: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  proposer: { id: string; username: string };
+  receiver: { id: string; username: string };
+  items: TradeItemView[];
+}
