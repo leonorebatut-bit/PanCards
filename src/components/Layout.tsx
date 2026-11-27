@@ -2,15 +2,17 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { Icon, type IconName } from './Icon';
 
-const NAV_ITEMS = [
-  { to: '/', label: '🏠 Accueil' },
-  { to: '/booster', label: '🎁 Boosters' },
-  { to: '/collection', label: '📚 Mon album' },
-  { to: '/ajouter', label: '➕ Créer une carte' },
-  { to: '/echanges', label: '🔄 Échanges' },
-  { to: '/communaute', label: '👥 Joueurs' },
-  { to: '/profil', label: '👤 Profil' },
+const NAV_ITEMS: Array<{ to: string; label: string; icon: IconName }> = [
+  { to: '/', label: 'Accueil', icon: 'home' },
+  { to: '/booster', label: 'Boosters', icon: 'booster' },
+  { to: '/collection', label: 'Mon album', icon: 'album' },
+  { to: '/ajouter', label: 'Créer une carte', icon: 'plus' },
+  { to: '/echanges', label: 'Échanges', icon: 'swap' },
+  { to: '/communaute', label: 'Joueurs', icon: 'users' },
+  { to: '/regles', label: 'Règles', icon: 'rules' },
+  { to: '/profil', label: 'Profil', icon: 'user' },
 ];
 
 export function Layout() {
@@ -45,7 +47,7 @@ export function Layout() {
       <header className="site-header">
         <div className="site-header-inner">
           <div className="brand-block">
-            <h1 className="brand-title">PAN-CARDS</h1>
+            <h1 className="brand-title">PanCards</h1>
           </div>
 
           <nav className="main-nav" aria-label="Navigation principale">
@@ -58,6 +60,7 @@ export function Layout() {
                   isActive ? 'nav-link active' : 'nav-link'
                 }
               >
+                <Icon name={item.icon} />
                 {item.label}
               </NavLink>
             ))}
@@ -67,14 +70,14 @@ export function Layout() {
 
       <div className="status-strip">
         <div className="status-strip-inner">
-          <span>{profile ? `🎮 JOUEUR : @${profile.username}` : '🎮 CONNECTE-TOI POUR JOUER'}</span>
+          <span>{profile ? `@${profile.username}` : 'Connecte-toi pour jouer'}</span>
           {profile ? (
             <span className="hud">
               <span className="hud-pill" title="Poubelles (monnaie du jeu)">
-                🗑️ {displayedPoubelles}
+                <Icon name="trash" size={14} /> {displayedPoubelles}
               </span>
               <NavLink to="/booster" className="hud-pill hud-pill-accent" title="Boosters disponibles">
-                🎁 {displayedBoosters}/8
+                <Icon name="booster" size={14} /> {displayedBoosters}/8
               </NavLink>
             </span>
           ) : (
@@ -91,7 +94,7 @@ export function Layout() {
 
       <footer className="site-footer">
         <div className="site-footer-inner">
-          <span>PAN-CARDS</span>
+          <span>PanCards</span>
         </div>
       </footer>
     </div>

@@ -10,6 +10,7 @@ import { PublicProfilePage } from './pages/PublicProfilePage';
 import { CardDetailPage } from './pages/CardDetailPage';
 import { AddPancartePage } from './pages/AddPancartePage';
 import { TradesPage } from './pages/TradesPage';
+import { RulesPage } from './pages/RulesPage';
 
 export function App() {
   return (
@@ -26,6 +27,7 @@ export function App() {
             <Route path="communaute" element={<CommunityPage />} />
             <Route path="communaute/:userId" element={<PublicProfilePage />} />
             <Route path="profil" element={<ProfilePage />} />
+            <Route path="regles" element={<RulesPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

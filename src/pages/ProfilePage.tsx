@@ -205,7 +205,6 @@ export function ProfilePage() {
   if (!user || !profile) {
     return (
       <div className="panel-box" style={{ maxWidth: '520px', margin: '0 auto' }}>
-        <span className="hero-kicker">🎮 PRÊT·E À JOUER ?</span>
         <h2 className="hero-headline" style={{ fontSize: '1.7rem' }}>
           {authMode === 'login' ? 'Connexion' : 'Créer un compte'}
         </h2>

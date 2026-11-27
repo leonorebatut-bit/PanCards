@@ -180,72 +180,30 @@ export function BoosterPage() {
       {errorMsg && <div className="alert-error">{errorMsg}</div>}
       {infoMsg && <div className="alert-ok">{infoMsg}</div>}
 
-      <section className="hero-editorial">
-        <div className="hero-main">
-          <span className="hero-kicker">TIRAGE ÉQUIPROBABLE · 5 PANCARTES</span>
-          <h2 className="hero-headline">OUVRIR UN BOOSTER</h2>
-          <p className="hero-lead">
-            Chaque booster contient 5 photographies tirées au sort parmi
-            l&apos;ensemble des pancartes publiées. Un booster gratuit se
-            recharge toutes les 15 minutes (plafond : 8 boosters).
-          </p>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={opening || boostersAvailable <= 0}
-              onClick={handleOpenBooster}
-            >
-              {opening
-                ? 'Tirage en cours...'
-                : `Ouvrir un booster (${boostersAvailable} dispo)`}
-            </button>
-
-            <button
-              type="button"
-              className="btn-secondary"
-              disabled={buying || poubelles < 200}
-              onClick={handleBuyBooster}
-            >
-              {buying
-                ? 'Achat...'
-                : 'Acheter 1 booster (200 poubelles)'}
-            </button>
-          </div>
+      <section className="booster-hero">
+        <h2 className="hero-headline">OUVRIR UN BOOSTER</h2>
+        <p className="booster-stock">
+          {boostersAvailable} / 8
+          {boostersAvailable < 8 && ` · prochain dans ${formatCountdown(secondsLeft)}`}
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem', justifyContent: 'center' }}>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={opening || boostersAvailable <= 0}
+            onClick={handleOpenBooster}
+          >
+            {opening ? 'Tirage en cours...' : 'Ouvrir un booster'}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={buying || poubelles < 200}
+            onClick={handleBuyBooster}
+          >
+            {buying ? 'Achat...' : 'Acheter un booster · 200'}
+          </button>
         </div>
-
-        <aside className="hero-aside">
-          <div className="stat-box">
-            <div className="stat-label">Boosters disponibles</div>
-            <div className="stat-value">{boostersAvailable} / 8</div>
-            <div
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '0.82rem',
-                marginTop: '0.35rem',
-              }}
-            >
-              {boostersAvailable >= 8
-                ? 'Stock maximal atteint'
-                : `Prochain booster dans ${formatCountdown(secondsLeft)}`}
-            </div>
-          </div>
-
-          <div className="stat-box">
-            <div className="stat-label">Solde de poubelles</div>
-            <div className="stat-value">{poubelles}</div>
-            <div
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '0.8rem',
-                marginTop: '0.35rem',
-              }}
-            >
-              Défausse : +10 · Note / Légende : +1 · Upload validé : +100
-            </div>
-          </div>
-        </aside>
       </section>
 
       {revealing && (() => {
@@ -287,7 +245,6 @@ export function BoosterPage() {
         <section className="panel-box" id="booster-overview">
           <div className="section-header">
             <h3 className="section-title">Ton booster</h3>
-            <span className="section-meta">Clique sur une carte pour la noter ou la commenter</span>
           </div>
 
           <div className="cards-grid">
@@ -325,11 +282,8 @@ export function BoosterPage() {
       )}
 
       {/* Historique des transactions de poubelles */}
-      <section className="panel-box">
-        <div className="section-header">
-          <h3 className="section-title">Historique des poubelles</h3>
-          <span className="section-meta">25 dernières opérations</span>
-        </div>
+      <details className="panel-box history-box">
+        <summary className="section-title">Historique des poubelles</summary>
 
         {transactions.length === 0 ? (
           <p style={{ margin: 0 }}>Aucune transaction enregistrée.</p>
@@ -392,7 +346,7 @@ export function BoosterPage() {
             </table>
           </div>
         )}
-      </section>
+      </details>
     </div>
   );
 }

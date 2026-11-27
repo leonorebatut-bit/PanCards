@@ -703,3 +703,123 @@ select {
 @media (prefers-reduced-motion: reduce) {
   .reveal-card, .reveal-hint { animation: none; }
 }
+
+/* ---------------------------------------------------------------------------
+   Design épuré : moins de bordures et d'ombres, icônes unicolores
+   --------------------------------------------------------------------------- */
+.icon {
+  display: inline-block;
+  vertical-align: -0.15em;
+  flex-shrink: 0;
+}
+
+.brand-title {
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-color: transparent;
+}
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.panel-box {
+  border: var(--border-thin);
+  box-shadow: none;
+}
+
+.hud-pill-accent {
+  animation: none;
+}
+
+.home-hero,
+.booster-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.5rem;
+  padding: clamp(2.5rem, 10vh, 6rem) 0;
+}
+
+.home-hero .hero-headline,
+.booster-hero .hero-headline {
+  max-width: 18ch;
+  margin: 0;
+}
+
+.booster-hero {
+  padding-bottom: 2.5rem;
+  gap: 1rem;
+}
+
+.booster-stock {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--color-gray-600);
+}
+
+.history-box > summary {
+  cursor: pointer;
+  list-style: revert;
+}
+
+.star-row {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.star-btn {
+  background: none;
+  border: none;
+  padding: 0.2rem;
+  cursor: pointer;
+  color: var(--color-gray-300);
+}
+
+.star-btn.active,
+.star-btn:hover {
+  color: var(--color-red);
+}
+
+.star-btn:disabled {
+  cursor: wait;
+}
+
+.rules-page {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.rules-page ul {
+  padding-left: 1.2rem;
+  margin: 0;
+}
+
+.rules-page li {
+  margin-bottom: 0.4rem;
+}
+
+/* Pied de page toujours en bas de l'écran */
+#root > div {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#root > div > main {
+  flex: 1;
+  width: 100%;
+}
