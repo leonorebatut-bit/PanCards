@@ -146,7 +146,7 @@ export function CollectionPage() {
         if (!inFolder) return false;
       }
       if (q) {
-        const hay = `${entry.card.id} ${entry.card.original_filename} ${
+        const hay = `${entry.card.id} ${
           entry.card.description ?? ''
         } ${entry.card.extra_info ?? ''}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -157,11 +157,7 @@ export function CollectionPage() {
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'alpha':
-          return a.card.original_filename.localeCompare(
-            b.card.original_filename,
-            'fr',
-            { numeric: true }
-          );
+          return a.card.id - b.card.id;
         case 'acquired_desc':
           return (
             new Date(b.lastAcquiredAt).getTime() -
@@ -367,7 +363,7 @@ export function CollectionPage() {
               id="search-cards"
               className="field-input"
               type="search"
-              placeholder="Nom, n°, légende..."
+              placeholder="N°, légende..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -384,7 +380,7 @@ export function CollectionPage() {
               onChange={(e) => setSortBy(e.target.value as SortOption)}
             >
               <option value="acquired_desc">Date d&apos;obtention (récent)</option>
-              <option value="alpha">Ordre alphabétique</option>
+              <option value="alpha">Par numéro</option>
               <option value="newest">Cartes les plus récentes</option>
               <option value="oldest">Cartes les plus anciennes</option>
               <option value="personal_rating">Notes personnelles</option>
@@ -598,14 +594,19 @@ export function CollectionPage() {
                   )}
                 </div>
 
-                <div className="pancarte-card-img-wrap">
+                <Link
+                  to={`/pancarte/${entry.card.id}`}
+                  className="pancarte-card-img-wrap"
+                  style={{ display: 'block' }}
+                  title="Voir, noter ou commenter cette carte"
+                >
                   <img
                     src={entry.card.thumb_url}
-                    alt={entry.card.original_filename}
+                    alt={`Pancarte n° ${entry.card.id}`}
                     className="pancarte-card-img"
                     loading="lazy"
                   />
-                </div>
+                </Link>
 
                 <div className="pancarte-card-body">
                   <div
@@ -615,9 +616,9 @@ export function CollectionPage() {
                       marginBottom: '0.35rem',
                     }}
                   >
-                    {entry.card.original_filename}
-                    {entry.personalRating !== null &&
-                      ` · ★ ${entry.personalRating}/5`}
+                    {entry.personalRating !== null
+                      ? `★ ${entry.personalRating}/5`
+                      : 'Pas encore notée'}
                   </div>
 
                   {selectedFolderId !== 'all' &&

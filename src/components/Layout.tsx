@@ -46,7 +46,6 @@ export function Layout() {
         <div className="site-header-inner">
           <div className="brand-block">
             <h1 className="brand-title">PAN-CARDS</h1>
-            <span className="brand-subtitle">Le jeu de cartes à collectionner</span>
           </div>
 
           <nav className="main-nav" aria-label="Navigation principale">
@@ -93,7 +92,6 @@ export function Layout() {
       <footer className="site-footer">
         <div className="site-footer-inner">
           <span>PAN-CARDS</span>
-          <span>UN BOOSTER OFFERT TOUTES LES 15 MIN · COLLECTIONNE-LES TOUTES</span>
         </div>
       </footer>
     </div>

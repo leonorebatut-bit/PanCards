@@ -11,19 +11,16 @@ export function CardTile({ card }: { card: Card }) {
       <div className="pancarte-card-img-wrap">
         <img
           src={card.thumb_url}
-          alt={card.original_filename}
+          alt={`Pancarte n° ${card.id}`}
           className="pancarte-card-img"
           loading="lazy"
         />
       </div>
-      <div className="pancarte-card-body">
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
-          {card.original_filename}
+      {card.description && (
+        <div className="pancarte-card-body">
+          <p style={{ margin: 0, fontSize: '0.85rem' }}>{card.description}</p>
         </div>
-        {card.description && (
-          <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem' }}>{card.description}</p>
-        )}
-      </div>
+      )}
     </Link>
   );
 }
