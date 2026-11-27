@@ -9,7 +9,6 @@ export function ProfilePage() {
     useAuth();
 
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
@@ -81,15 +80,15 @@ export function ProfilePage() {
     setSubmitting(true);
 
     if (authMode === 'login') {
-      const { error } = await signIn({ email, password });
+      const { error } = await signIn({ identifier: username, password });
       if (error) setAuthError(error);
     } else {
-      const { error, needsEmailConfirmation } = await signUp({ email, password, username });
+      const { error, needsEmailConfirmation } = await signUp({ password, username });
       if (error) {
         setAuthError(error);
       } else if (needsEmailConfirmation) {
         setAuthInfo(
-          'Compte créé ! Un e-mail de confirmation t’a été envoyé : clique sur le lien avant de te connecter.'
+          'Compte créé, mais la connexion est bloquée : la confirmation par e-mail est encore activée dans Supabase (Authentication › Sign In / Providers › Email › Confirm email). Désactive-la puis connecte-toi.'
         );
       } else {
         // Connexion automatique : le message s'affiche dans la vue du profil
@@ -233,34 +232,24 @@ export function ProfilePage() {
         {authInfo && <div className="alert-ok">{authInfo}</div>}
 
         <form onSubmit={handleAuthSubmit}>
-          {authMode === 'register' && (
-            <div className="field-group">
-              <label className="field-label" htmlFor="username">
-                Pseudonyme unique
-              </label>
-              <input
-                id="username"
-                className="field-input"
-                type="text"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="ex_militante_92"
-              />
-            </div>
-          )}
-
           <div className="field-group">
-            <label className="field-label" htmlFor="email">
-              Adresse e-mail
+            <label className="field-label" htmlFor="username">
+              {authMode === 'register' ? 'Choisis un pseudonyme unique' : 'Pseudonyme'}
             </label>
             <input
-              id="email"
+              id="username"
               className="field-input"
-              type="email"
+              type="text"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="username"
+              autoCapitalize="none"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder={
+                authMode === 'register'
+                  ? 'ex_militante_92'
+                  : 'Ton pseudonyme (ou ton e-mail pour un ancien compte)'
+              }
             />
           </div>
 

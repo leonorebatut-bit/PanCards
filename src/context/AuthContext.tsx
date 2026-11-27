@@ -18,24 +18,34 @@ interface AuthContextValue {
   loading: boolean;
   refreshProfile: () => Promise<void>;
   signUp: (params: {
-    email: string;
     password: string;
     username: string;
   }) => Promise<{ error: string | null; needsEmailConfirmation?: boolean }>;
   signIn: (params: {
-    email: string;
+    /** Pseudonyme, ou adresse e-mail pour les comptes créés avant ce changement */
+    identifier: string;
     password: string;
   }) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
+// Connexion par pseudonyme : Supabase Auth exige une adresse e-mail, on en
+// dérive donc une à partir du pseudonyme. Elle n'est jamais affichée et
+// aucun e-mail n'y est envoyé (la confirmation par e-mail doit être
+// désactivée dans Supabase). Le domaine .invalid est réservé (RFC 2606).
+const USERNAME_EMAIL_DOMAIN = 'users.pancards.invalid';
+
+export function usernameToEmail(username: string): string {
+  return `${username.trim().toLowerCase()}@${USERNAME_EMAIL_DOMAIN}`;
+}
+
 // Traduction des erreurs d'authentification Supabase les plus courantes
 function translateAuthError(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes('invalid login credentials')) return 'E-mail ou mot de passe incorrect.';
+  if (m.includes('invalid login credentials')) return 'Pseudonyme ou mot de passe incorrect.';
   if (m.includes('email not confirmed'))
-    return 'Ton adresse e-mail n’est pas encore confirmée. Clique sur le lien reçu par e-mail.';
-  if (m.includes('user already registered')) return 'Un compte existe déjà avec cette adresse e-mail.';
+    return 'Compte non confirmé : la confirmation par e-mail doit être désactivée dans Supabase (Authentication › Sign In / Providers › Email).';
+  if (m.includes('user already registered')) return 'Ce pseudonyme est déjà utilisé.';
   if (m.includes('password should be at least')) {
     const min = message.match(/at least (\d+)/i)?.[1];
     return min
@@ -137,7 +147,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchProfile]);
 
   const signUp: AuthContextValue['signUp'] = async ({
-    email,
     password,
     username,
   }) => {
@@ -160,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
+      email: usernameToEmail(cleanUsername),
       password,
       options: {
         data: { username: cleanUsername },
@@ -176,14 +185,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Adresse déjà utilisée : Supabase renvoie une réponse « masquée »
     // (utilisateur sans identité, aucune session, aucun e-mail envoyé).
     if (!data.session && data.user && data.user.identities?.length === 0) {
-      return { error: 'Un compte existe déjà avec cette adresse e-mail.' };
+      return { error: 'Ce pseudonyme est déjà utilisé.' };
     }
     return { error: null, needsEmailConfirmation: !data.session };
   };
 
-  const signIn: AuthContextValue['signIn'] = async ({ email, password }) => {
+  const signIn: AuthContextValue['signIn'] = async ({ identifier, password }) => {
+    const value = identifier.trim();
     const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
+      // Un « @ » = ancien compte créé avec une vraie adresse e-mail
+      email: value.includes('@') ? value : usernameToEmail(value),
       password,
     });
     if (error) {
