@@ -92,8 +92,8 @@ export function ProfilePage() {
           'Compte créé ! Un e-mail de confirmation t’a été envoyé : clique sur le lien avant de te connecter.'
         );
       } else {
-        // Connexion automatique : la page affiche le profil dès qu'il est chargé
-        setAuthInfo('Compte créé, bienvenue !');
+        // Connexion automatique : le message s'affiche dans la vue du profil
+        setSaveMsg('Compte créé, bienvenue !');
       }
     }
     setSubmitting(false);
