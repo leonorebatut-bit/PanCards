@@ -84,13 +84,16 @@ export function ProfilePage() {
       const { error } = await signIn({ email, password });
       if (error) setAuthError(error);
     } else {
-      const { error } = await signUp({ email, password, username });
+      const { error, needsEmailConfirmation } = await signUp({ email, password, username });
       if (error) {
         setAuthError(error);
-      } else {
+      } else if (needsEmailConfirmation) {
         setAuthInfo(
-          'Compte créé ! Si la confirmation par e-mail est activée sur Supabase, vérifie ta boîte mail avant de te connecter.'
+          'Compte créé ! Un e-mail de confirmation t’a été envoyé : clique sur le lien avant de te connecter.'
         );
+      } else {
+        // Connexion automatique : la page affiche le profil dès qu'il est chargé
+        setAuthInfo('Compte créé, bienvenue !');
       }
     }
     setSubmitting(false);

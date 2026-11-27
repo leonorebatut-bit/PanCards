@@ -21,12 +21,28 @@ interface AuthContextValue {
     email: string;
     password: string;
     username: string;
-  }) => Promise<{ error: string | null }>;
+  }) => Promise<{ error: string | null; needsEmailConfirmation?: boolean }>;
   signIn: (params: {
     email: string;
     password: string;
   }) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+}
+
+// Traduction des erreurs d'authentification Supabase les plus courantes
+function translateAuthError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes('invalid login credentials')) return 'E-mail ou mot de passe incorrect.';
+  if (m.includes('email not confirmed'))
+    return 'Ton adresse e-mail n’est pas encore confirmée. Clique sur le lien reçu par e-mail.';
+  if (m.includes('user already registered')) return 'Un compte existe déjà avec cette adresse e-mail.';
+  if (m.includes('password should be at least'))
+    return 'Le mot de passe est trop court (6 caractères minimum).';
+  if (m.includes('rate limit') || m.includes('too many requests'))
+    return 'Trop de tentatives. Patiente quelques minutes avant de réessayer.';
+  if (m.includes('database error saving new user'))
+    return 'Création du compte impossible : ce pseudonyme est peut-être déjà pris.';
+  return message;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -139,7 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: 'Ce pseudonyme est déjà utilisé par un autre membre.' };
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
       options: {
@@ -148,10 +164,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      return { error: error.message };
+      return { error: translateAuthError(error.message) };
     }
 
-    return { error: null };
+    // Sans confirmation par e-mail, Supabase renvoie directement une session :
+    // l'utilisateur est connecté. Sinon, il doit d'abord valider son adresse.
+    return { error: null, needsEmailConfirmation: !data.session };
   };
 
   const signIn: AuthContextValue['signIn'] = async ({ email, password }) => {
@@ -160,7 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
     });
     if (error) {
-      return { error: error.message };
+      return { error: translateAuthError(error.message) };
     }
     return { error: null };
   };
