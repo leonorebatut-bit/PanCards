@@ -61,6 +61,8 @@ l'éditeur SQL de Supabase (copier-coller du fichier puis « Run ») ou `supabas
    vitrine, propositions et modération), correctif du trigger de protection des profils,
    registre des récompenses, règles des buckets `submissions`, `pancartes` et `avatars`.
    Cette migration peut être rejouée sans risque ; elle remplace les fonctions de même nom.
+3. `003_missing_profiles.sql` : crée les profils manquants des comptes existants
+   (« Profil introuvable ») et rend l'inscription robuste. Peut être rejouée sans risque.
 
 Pour donner les droits d'administration à un compte :
 
