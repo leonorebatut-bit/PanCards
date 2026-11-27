@@ -93,6 +93,7 @@ export interface CardComment {
   user_id: string;
   card_id: number;
   content: string;
+  is_public: boolean;
   created_at: string;
   author?: {
     username: string;

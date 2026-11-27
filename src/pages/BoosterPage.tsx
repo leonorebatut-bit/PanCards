@@ -31,6 +31,7 @@ export function BoosterPage() {
   const [buying, setBuying] = useState(false);
   const [drawnCards, setDrawnCards] = useState<BoosterDrawnCard[]>([]);
   const [revealedCount, setRevealedCount] = useState<number>(0);
+  const [showOverview, setShowOverview] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
@@ -89,16 +90,33 @@ export function BoosterPage() {
     return () => window.clearInterval(timer);
   }, [user, boostersAvailable, secondsLeft, syncBoostersAndHistory, refreshProfile]);
 
-  // Révélation séquentielle des 5 cartes tirées
+  // Révélation carte par carte : une touche (ou un clic / toucher) = carte suivante
+  const revealing = drawnCards.length > 0 && revealedCount > 0 && !showOverview;
+
+  const showNextCard = useCallback(() => {
+    if (revealedCount >= drawnCards.length) {
+      setShowOverview(true);
+    } else {
+      setRevealedCount(revealedCount + 1);
+    }
+  }, [revealedCount, drawnCards.length]);
+
   useEffect(() => {
-    if (drawnCards.length === 0 || revealedCount >= drawnCards.length) return;
+    if (showOverview) {
+      document.getElementById('booster-overview')?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [showOverview]);
 
-    const stepTimer = window.setTimeout(() => {
-      setRevealedCount((c) => c + 1);
-    }, 260);
-
-    return () => window.clearTimeout(stepTimer);
-  }, [drawnCards, revealedCount]);
+  useEffect(() => {
+    if (!revealing) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      e.preventDefault();
+      showNextCard();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [revealing, showNextCard]);
 
   const handleOpenBooster = async () => {
     setErrorMsg(null);
@@ -106,6 +124,7 @@ export function BoosterPage() {
     setOpening(true);
     setDrawnCards([]);
     setRevealedCount(0);
+    setShowOverview(false);
 
     const { data, error } = await supabase.rpc('open_booster');
 
@@ -229,63 +248,78 @@ export function BoosterPage() {
         </aside>
       </section>
 
-      {drawnCards.length > 0 && (
-        <section className="panel-box">
+      {revealing && (() => {
+        const item = drawnCards[revealedCount - 1];
+        const isLast = revealedCount >= drawnCards.length;
+        return (
+          <div
+            className="reveal-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Carte ${revealedCount} sur ${drawnCards.length}`}
+            onClick={showNextCard}
+          >
+            <div className="reveal-counter">
+              CARTE {revealedCount} / {drawnCards.length}
+              {item.is_new_to_collection ? (
+                <span className="badge-dup">NOUVELLE</span>
+              ) : (
+                <span className="badge-unique">DOUBLON</span>
+              )}
+            </div>
+            <img
+              key={item.user_card_id}
+              src={item.image_url}
+              alt={`Pancarte n° ${item.card_id}`}
+              className="reveal-card"
+            />
+            {item.description && <p className="reveal-caption">{item.description}</p>}
+            <div className="reveal-hint">
+              {isLast
+                ? 'Appuie sur une touche (ou touche l’écran) pour voir tout le booster'
+                : 'Appuie sur une touche (ou touche l’écran) pour la carte suivante'}
+            </div>
+          </div>
+        );
+      })()}
+
+      {showOverview && drawnCards.length > 0 && (
+        <section className="panel-box" id="booster-overview">
           <div className="section-header">
-            <h3 className="section-title">Contenu du booster</h3>
-            {revealedCount < drawnCards.length && (
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setRevealedCount(drawnCards.length)}
-              >
-                Tout révéler
-              </button>
-            )}
+            <h3 className="section-title">Ton booster</h3>
+            <span className="section-meta">Clique sur une carte pour la noter ou la commenter</span>
           </div>
 
           <div className="cards-grid">
-            {drawnCards.map((item, idx) => {
-              const isRevealed = idx < revealedCount;
-              return (
-                <article
-                  key={item.user_card_id}
-                  className="pancarte-card"
-                  style={{
-                    opacity: isRevealed ? 1 : 0.2,
-                    transition: 'opacity 0.25s ease',
-                  }}
-                >
-                  <div className="pancarte-card-top">
-                    <span>N° {String(item.card_id).padStart(4, '0')}</span>
-                    {item.is_new_to_collection ? (
-                      <span className="badge-dup">NOUVELLE</span>
-                    ) : (
-                      <span className="badge-unique">DOUBLON</span>
-                    )}
-                  </div>
-
-                  <div className="pancarte-card-img-wrap">
-                    <img
-                      src={item.thumb_url}
-                      alt={item.original_filename}
-                      className="pancarte-card-img"
-                    />
-                  </div>
-
+            {drawnCards.map((item) => (
+              <Link
+                key={item.user_card_id}
+                to={`/pancarte/${item.card_id}`}
+                className="pancarte-card"
+                style={{ display: 'block' }}
+              >
+                <div className="pancarte-card-top">
+                  <span>N° {String(item.card_id).padStart(4, '0')}</span>
+                  {item.is_new_to_collection ? (
+                    <span className="badge-dup">NOUVELLE</span>
+                  ) : (
+                    <span className="badge-unique">DOUBLON</span>
+                  )}
+                </div>
+                <div className="pancarte-card-img-wrap">
+                  <img
+                    src={item.thumb_url}
+                    alt={`Pancarte n° ${item.card_id}`}
+                    className="pancarte-card-img"
+                  />
+                </div>
+                {item.description && (
                   <div className="pancarte-card-body">
-                    <div
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: '0.78rem',
-                      }}
-                    >
-                      {item.original_filename}
-                    </div>
+                    <p style={{ margin: 0, fontSize: '0.85rem' }}>{item.description}</p>
                   </div>
-                </article>
-              );
-            })}
+                )}
+              </Link>
+            ))}
           </div>
         </section>
       )}

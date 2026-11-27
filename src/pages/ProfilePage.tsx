@@ -446,7 +446,7 @@ export function ProfilePage() {
                   <div className="pancarte-card-img-wrap">
                     <img
                       src={card.thumb_url}
-                      alt={card.original_filename}
+                      alt={`Pancarte n° ${card.id}`}
                       className="pancarte-card-img"
                       loading="lazy"
                     />
