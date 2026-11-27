@@ -10,15 +10,15 @@ import { PublicProfilePage } from './pages/PublicProfilePage';
 import { CardDetailPage } from './pages/CardDetailPage';
 import { AddPancartePage } from './pages/AddPancartePage';
 
-function PhasePlaceholder({ title, phase }: { title: string; phase: string }) {
+function ComingSoon({ title }: { title: string }) {
   return (
     <section className="panel-box">
-      <span className="hero-kicker">{phase}</span>
+      <span className="hero-kicker">BIENTÔT DISPONIBLE</span>
       <h2 className="hero-headline" style={{ fontSize: '1.8rem' }}>
         {title}
       </h2>
       <p style={{ marginBottom: 0 }}>
-        Ce module sera connecté à la base lors de la phase suivante.
+        Cette partie du jeu arrive bientôt. En attendant, ouvre des boosters !
       </p>
     </section>
   );
@@ -38,7 +38,7 @@ export function App() {
             <Route
               path="echanges"
               element={
-                <PhasePlaceholder title="Échanges entre joueurs" phase="Phase 5 : Communauté" />
+                <ComingSoon title="Échanges entre joueurs" />
               }
             />
             <Route path="communaute" element={<CommunityPage />} />

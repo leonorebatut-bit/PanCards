@@ -16,6 +16,8 @@ interface AuthContextValue {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  /** Raison technique si le profil n'a pas pu être chargé */
+  profileError: string | null;
   refreshProfile: () => Promise<void>;
   signUp: (params: {
     password: string;
@@ -66,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const loadedProfileUserId = useRef<string | null>(null);
   // Utilisateur actuellement connecté : une réponse arrivée après une
   // déconnexion ou un changement de compte est ignorée.
@@ -76,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
 
     let { data, error } = await loadProfile();
+    let repairError: string | null = null;
 
     // Compte sans profil (créé avant l'installation du trigger d'inscription) :
     // on demande à la base de le créer, puis on recharge.
@@ -83,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error: rpcError } = await supabase.rpc('ensure_my_profile');
       if (rpcError) {
         console.error('Création du profil impossible :', rpcError.message);
+        repairError = rpcError.message;
       } else {
         ({ data, error } = await loadProfile());
       }
@@ -92,9 +97,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!error && data) {
       setProfile(data as Profile);
+      setProfileError(null);
       loadedProfileUserId.current = userId;
     } else {
       setProfile(null);
+      setProfileError(
+        error?.message ?? repairError ?? 'Aucun profil trouvé pour ce compte.'
+      );
       loadedProfileUserId.current = null;
     }
   }, []);
@@ -227,6 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         loading,
+        profileError,
         refreshProfile,
         signUp,
         signIn,
