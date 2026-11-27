@@ -144,6 +144,7 @@ async function runImport() {
         description: null,
         extra_info: null,
         status: 'published',
+        published_at: new Date().toISOString(),
       });
 
       if (insertError) {

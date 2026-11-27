@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -35,6 +36,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const loadedProfileUserId = useRef<string | null>(null);
+  // Utilisateur actuellement connecté : une réponse arrivée après une
+  // déconnexion ou un changement de compte est ignorée.
+  const currentUserId = useRef<string | null>(null);
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
@@ -43,10 +48,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq('id', userId)
       .single();
 
+    if (currentUserId.current !== userId) return;
+
     if (!error && data) {
       setProfile(data as Profile);
+      loadedProfileUserId.current = userId;
     } else {
       setProfile(null);
+      loadedProfileUserId.current = null;
     }
   }, []);
 
@@ -63,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       setSession(data.session);
       setUser(data.session?.user ?? null);
+      currentUserId.current = data.session?.user?.id ?? null;
       if (data.session?.user) {
         void fetchProfile(data.session.user.id).finally(() => {
           if (active) setLoading(false);
@@ -74,16 +84,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!active) return;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
+      currentUserId.current = nextSession?.user?.id ?? null;
       if (nextSession?.user) {
-        void fetchProfile(nextSession.user.id);
+        const userId = nextSession.user.id;
+        // Le profil ne change pas lors d'un simple rafraîchissement du jeton
+        if (event === 'TOKEN_REFRESHED') return;
+        // Nouvel utilisateur (connexion) : on garde l'état « chargement » tant
+        // que le profil n'est pas arrivé, pour éviter d'afficher « Connexion
+        // requise ». Même utilisateur : rafraîchissement silencieux.
+        if (loadedProfileUserId.current !== userId) setLoading(true);
+        // Supabase déconseille d'appeler l'API directement dans ce callback
+        // (risque de blocage) : on diffère l'appel.
+        window.setTimeout(() => {
+          void fetchProfile(userId).finally(() => {
+            if (active && currentUserId.current === userId) setLoading(false);
+          });
+        }, 0);
       } else {
         setProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {
@@ -144,6 +168,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
+    loadedProfileUserId.current = null;
+    currentUserId.current = null;
   };
 
   return (
