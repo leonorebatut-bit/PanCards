@@ -310,12 +310,11 @@ export function AddPancartePage() {
                   <div className="pancarte-card-img-wrap">
                     <img
                       src={displayUrl(item.image_url)}
-                      alt={item.original_filename}
+                      alt={`Pancarte n° ${item.id}`}
                       className="pancarte-card-img"
                     />
                   </div>
                   <div className="pancarte-card-body">
-                    <strong style={{ fontSize: '0.84rem' }}>{item.original_filename}</strong>
                     {item.description && (
                       <p style={{ fontSize: '0.82rem', margin: '0.35rem 0' }}>
                         {item.description}
@@ -370,14 +369,9 @@ export function AddPancartePage() {
                 <div className="pancarte-card-img-wrap">
                   <img
                     src={displayUrl(item.thumb_url)}
-                    alt={item.original_filename}
+                    alt={`Pancarte n° ${item.id}`}
                     className="pancarte-card-img"
                   />
-                </div>
-                <div className="pancarte-card-body">
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
-                    {item.original_filename}
-                  </div>
                 </div>
               </article>
             ))}

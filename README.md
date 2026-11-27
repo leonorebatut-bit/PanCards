@@ -65,6 +65,8 @@ l'éditeur SQL de Supabase (copier-coller du fichier puis « Run ») ou `supabas
    (« Profil introuvable ») et rend l'inscription robuste. Peut être rejouée sans risque.
 4. `004_grants.sql` : droits d'accès aux tables pour l'API (« permission denied for
    table … » sur les projets Supabase récents). Peut être rejouée sans risque.
+6. `006_comment_visibility.sql` : légendes / commentaires publics ou privés.
+   Peut être rejouée sans risque.
 
 Pour donner les droits d'administration à un compte :
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { Card, CardComment, CardRatingSummary } from '../types/database';
@@ -7,6 +7,7 @@ import type { Card, CardComment, CardRatingSummary } from '../types/database';
 export function CardDetailPage() {
   const { cardId } = useParams<{ cardId: string }>();
   const numericId = Number(cardId);
+  const navigate = useNavigate();
   const { user, profile, refreshProfile } = useAuth();
 
   const [card, setCard] = useState<Card | null>(null);
@@ -19,6 +20,7 @@ export function CardDetailPage() {
   });
   const [comments, setComments] = useState<CardComment[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [newCommentPublic, setNewCommentPublic] = useState(true);
 
   const [loading, setLoading] = useState(true);
   const [ratingBusy, setRatingBusy] = useState(false);
@@ -38,7 +40,7 @@ export function CardDetailPage() {
       supabase.rpc('get_card_rating_summary', { p_card_id: numericId }),
       supabase
         .from('comments')
-        .select('id, user_id, card_id, content, created_at, author:profiles(username, avatar_url)')
+        .select('id, user_id, card_id, content, is_public, created_at, author:profiles(username, avatar_url)')
         .eq('card_id', numericId)
         .order('created_at', { ascending: false }),
     ]);
@@ -122,6 +124,7 @@ export function CardDetailPage() {
     const { data, error } = await supabase.rpc('add_card_comment', {
       p_card_id: numericId,
       p_content: newComment.trim(),
+      p_is_public: newCommentPublic,
     });
 
     if (error) {
@@ -133,14 +136,29 @@ export function CardDetailPage() {
       setNewComment('');
       setFeedback(
         res?.reward_granted
-          ? 'Commentaire publié — +1 poubelle gagnée !'
-          : 'Commentaire publié.'
+          ? `Commentaire ${newCommentPublic ? 'publié' : 'enregistré (privé)'} — +1 poubelle gagnée !`
+          : `Commentaire ${newCommentPublic ? 'publié' : 'enregistré (privé)'}.`
       );
       await loadCardData();
       await refreshProfile();
     }
 
     setCommentBusy(false);
+  };
+
+  const handleToggleVisibility = async (comment: CardComment) => {
+    const next = !comment.is_public;
+    const { error } = await supabase
+      .from('comments')
+      .update({ is_public: next })
+      .eq('id', comment.id);
+    if (error) {
+      setErrorMsg(error.message);
+    } else {
+      setComments((prev) =>
+        prev.map((c) => (c.id === comment.id ? { ...c, is_public: next } : c))
+      );
+    }
   };
 
   const handleDeleteComment = async (commentId: string) => {
@@ -169,9 +187,13 @@ export function CardDetailPage() {
   return (
     <div>
       <div style={{ marginBottom: '1rem' }}>
-        <Link to="/" className="btn-secondary">
-          ← Retour aux cartes
-        </Link>
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}
+        >
+          ← Retour
+        </button>
       </div>
 
       {errorMsg && <div className="alert-error">{errorMsg}</div>}
@@ -194,20 +216,20 @@ export function CardDetailPage() {
         >
           <img
             src={card.image_url}
-            alt={card.original_filename}
+            alt={`Pancarte n° ${card.id}`}
             style={{ width: '100%', display: 'block', maxHeight: '72vh', objectFit: 'contain' }}
           />
         </div>
 
         <div>
           <span className="hero-kicker">
-            CARTE N° {String(card.id).padStart(4, '0')} · {card.status.toUpperCase()}
+            {card.status === 'published' ? 'CARTE' : card.status.toUpperCase()}
           </span>
           <h2
             className="hero-headline"
             style={{ fontSize: '1.65rem', margin: '0.45rem 0 0.75rem' }}
           >
-            {card.original_filename}
+            Pancarte n° {String(card.id).padStart(4, '0')}
           </h2>
 
           {user && (
@@ -315,8 +337,36 @@ export function CardDetailPage() {
                 onChange={(e) => setNewComment(e.target.value)}
               />
             </div>
+            <div
+              role="radiogroup"
+              aria-label="Visibilité du commentaire"
+              style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.85rem' }}
+            >
+              <label style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="comment-visibility"
+                  checked={newCommentPublic}
+                  onChange={() => setNewCommentPublic(true)}
+                />
+                🌍 Public (visible par tous)
+              </label>
+              <label style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="comment-visibility"
+                  checked={!newCommentPublic}
+                  onChange={() => setNewCommentPublic(false)}
+                />
+                🔒 Privé (visible par toi seul·e)
+              </label>
+            </div>
             <button type="submit" className="btn-primary" disabled={commentBusy}>
-              {commentBusy ? 'Publication...' : 'Publier le commentaire'}
+              {commentBusy
+                ? 'Enregistrement...'
+                : newCommentPublic
+                  ? 'Publier le commentaire'
+                  : 'Enregistrer en privé'}
             </button>
           </form>
         ) : (
@@ -333,7 +383,8 @@ export function CardDetailPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             {comments.map((c) => {
-              const canDelete = user?.id === c.user_id || Boolean(profile?.is_admin);
+              const isMine = user?.id === c.user_id;
+              const canDelete = isMine || Boolean(profile?.is_admin);
               return (
                 <article
                   key={c.id}
@@ -358,7 +409,18 @@ export function CardDetailPage() {
                       @{c.author?.username ?? 'membre'}
                     </Link>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      {!c.is_public && <span className="badge-unique">🔒 PRIVÉ</span>}
                       <span>{new Date(c.created_at).toLocaleString('fr-FR')}</span>
+                      {isMine && (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ padding: '0.15rem 0.45rem', fontSize: '0.7rem' }}
+                          onClick={() => handleToggleVisibility(c)}
+                        >
+                          {c.is_public ? 'Rendre privé' : 'Rendre public'}
+                        </button>
+                      )}
                       {canDelete && (
                         <button
                           type="button"
