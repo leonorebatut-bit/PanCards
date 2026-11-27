@@ -160,7 +160,7 @@ export function CardDetailPage() {
         </h2>
         <p>Cette photographie n&apos;existe pas ou n&apos;est pas encore publiée.</p>
         <Link to="/" className="btn-secondary">
-          ← Retour à l&apos;archive
+          ← Retour aux cartes
         </Link>
       </div>
     );
@@ -170,7 +170,7 @@ export function CardDetailPage() {
     <div>
       <div style={{ marginBottom: '1rem' }}>
         <Link to="/" className="btn-secondary">
-          ← Retour à l&apos;archive
+          ← Retour aux cartes
         </Link>
       </div>
 

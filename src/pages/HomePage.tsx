@@ -48,32 +48,32 @@ export function HomePage() {
     <div>
       <section className="hero-editorial">
         <div className="hero-main">
-          <span className="hero-kicker">FONDS PHOTOGRAPHIQUE COLLABORATIF</span>
+          <span className="hero-kicker">JEU DE CARTES À COLLECTIONNER</span>
           <h2 className="hero-headline">
-            COLLECTER LES MOTS DE LA RUE, ARCHIVER LES PANCARTES.
+            OUVRE DES BOOSTERS, COLLECTIONNE TOUTES LES PANCARTES !
           </h2>
           <p className="hero-lead">
-            Chaque carte provient d&apos;une photographie réelle prise en manifestation.
-            Ouvre des boosters gratuits toutes les 15 minutes, documente les
-            pancartes avec la communauté et échange tes doublons.
+            Un booster gratuit t&apos;attend toutes les 15 minutes. Découvre de
+            nouvelles cartes, complète ton album, gagne des poubelles en notant et
+            en commentant, et échange tes doubles avec les autres joueurs.
           </p>
           <Link to="/booster" className="btn-primary">
-            Accéder aux boosters →
+            🎁 Ouvrir un booster
           </Link>
         </div>
 
         <aside className="hero-aside">
           <div className="stat-box">
-            <div className="stat-label">Pancartes archivées</div>
+            <div className="stat-label">Cartes à collectionner</div>
             <div className="stat-value">
               {totalPublished !== null ? totalPublished : '—'}
             </div>
           </div>
 
           <div className="stat-box">
-            <div className="stat-label">Règle de tirage</div>
+            <div className="stat-label">Règles du jeu</div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', marginTop: '0.35rem' }}>
-              5 cartes / booster · Équiprobabilité stricte · Plafond 8 boosters
+              5 cartes par booster · Toutes les cartes ont la même chance · Jusqu&apos;à 8 boosters en réserve
             </div>
           </div>
         </aside>
@@ -81,7 +81,7 @@ export function HomePage() {
 
       <section>
         <div className="section-header">
-          <h3 className="section-title">Dernières pancartes intégrées</h3>
+          <h3 className="section-title">Nouvelles cartes</h3>
           <span className="section-meta">
             {totalPublished !== null
               ? `Affichage de ${recentCards.length} sur ${totalPublished}`
@@ -89,7 +89,7 @@ export function HomePage() {
           </span>
         </div>
 
-        {loading && <p>Chargement des archives photographiques...</p>}
+        {loading && <p>Chargement des cartes...</p>}
 
         {errorMsg && (
           <div
