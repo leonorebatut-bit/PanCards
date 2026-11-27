@@ -72,11 +72,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const currentUserId = useRef<string | null>(null);
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    const loadProfile = () =>
+      supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+
+    let { data, error } = await loadProfile();
+
+    // Compte sans profil (créé avant l'installation du trigger d'inscription) :
+    // on demande à la base de le créer, puis on recharge.
+    if (!error && !data && currentUserId.current === userId) {
+      const { error: rpcError } = await supabase.rpc('ensure_my_profile');
+      if (rpcError) {
+        console.error('Création du profil impossible :', rpcError.message);
+      } else {
+        ({ data, error } = await loadProfile());
+      }
+    }
 
     if (currentUserId.current !== userId) return;
 
