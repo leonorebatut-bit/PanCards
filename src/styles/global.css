@@ -493,3 +493,154 @@ select {
   font-size: 0.85rem;
   margin-bottom: 1rem;
 }
+
+/* ------------------------------------------------------------------------
+   Échanges entre joueurs
+   ------------------------------------------------------------------------ */
+.trade-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.trade-tab {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  background-color: var(--color-white);
+  color: var(--color-black);
+  border: var(--border-thick);
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+}
+
+.trade-tab.is-active {
+  background-color: var(--color-black);
+  color: var(--color-white);
+}
+
+.trade-box-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.trade-box-head a {
+  color: inherit;
+}
+
+.trade-status {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-gray-600);
+}
+
+.trade-message {
+  font-style: italic;
+  margin: 0 0 0.75rem;
+}
+
+.trade-sides {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.trade-side-title {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-size: 0.95rem;
+  margin: 0 0 0.6rem;
+}
+
+.trade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 0.6rem;
+  max-height: 520px;
+  overflow-y: auto;
+  padding: 0 6px 6px 0;
+}
+
+.trade-mini {
+  border: var(--border-thick);
+  background-color: var(--color-white);
+  display: flex;
+  flex-direction: column;
+}
+
+.trade-mini-img-wrap {
+  display: block;
+  aspect-ratio: 3 / 4;
+  background-color: var(--color-gray-100);
+  overflow: hidden;
+}
+
+.trade-mini-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.trade-mini-body {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem;
+  padding: 0.3rem 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.trade-mini-badge {
+  background-color: var(--color-red);
+  color: var(--color-white);
+  padding: 0 0.3rem;
+  font-weight: 700;
+}
+
+.trade-pick.is-picked .trade-mini {
+  border-color: var(--color-red);
+  box-shadow: var(--shadow-hard-red);
+}
+
+.trade-pick-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: var(--border-thin);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.trade-step {
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.2rem 0.7rem;
+  cursor: pointer;
+}
+
+.trade-step:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.trade-empty {
+  font-size: 0.9rem;
+  color: var(--color-gray-600);
+  margin: 0;
+}
+
+.trade-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}

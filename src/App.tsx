@@ -9,20 +9,7 @@ import { CommunityPage } from './pages/CommunityPage';
 import { PublicProfilePage } from './pages/PublicProfilePage';
 import { CardDetailPage } from './pages/CardDetailPage';
 import { AddPancartePage } from './pages/AddPancartePage';
-
-function ComingSoon({ title }: { title: string }) {
-  return (
-    <section className="panel-box">
-      <span className="hero-kicker">BIENTÔT DISPONIBLE</span>
-      <h2 className="hero-headline" style={{ fontSize: '1.8rem' }}>
-        {title}
-      </h2>
-      <p style={{ marginBottom: 0 }}>
-        Cette partie du jeu arrive bientôt. En attendant, ouvre des boosters !
-      </p>
-    </section>
-  );
-}
+import { TradesPage } from './pages/TradesPage';
 
 export function App() {
   return (
@@ -35,12 +22,7 @@ export function App() {
             <Route path="collection" element={<CollectionPage />} />
             <Route path="ajouter" element={<AddPancartePage />} />
             <Route path="pancarte/:cardId" element={<CardDetailPage />} />
-            <Route
-              path="echanges"
-              element={
-                <ComingSoon title="Échanges entre joueurs" />
-              }
-            />
+            <Route path="echanges" element={<TradesPage />} />
             <Route path="communaute" element={<CommunityPage />} />
             <Route path="communaute/:userId" element={<PublicProfilePage />} />
             <Route path="profil" element={<ProfilePage />} />
