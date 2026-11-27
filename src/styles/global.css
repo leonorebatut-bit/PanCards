@@ -643,6 +643,7 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
+}
 
 /* Ouverture de booster : une carte à la fois en grand */
 .reveal-overlay {
