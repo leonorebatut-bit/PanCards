@@ -37,6 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const loadedProfileUserId = useRef<string | null>(null);
+  // Utilisateur actuellement connecté : une réponse arrivée après une
+  // déconnexion ou un changement de compte est ignorée.
+  const currentUserId = useRef<string | null>(null);
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
@@ -44,6 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .select('*')
       .eq('id', userId)
       .single();
+
+    if (currentUserId.current !== userId) return;
 
     if (!error && data) {
       setProfile(data as Profile);
@@ -67,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       setSession(data.session);
       setUser(data.session?.user ?? null);
+      currentUserId.current = data.session?.user?.id ?? null;
       if (data.session?.user) {
         void fetchProfile(data.session.user.id).finally(() => {
           if (active) setLoading(false);
@@ -82,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
+      currentUserId.current = nextSession?.user?.id ?? null;
       if (nextSession?.user) {
         const userId = nextSession.user.id;
         // Le profil ne change pas lors d'un simple rafraîchissement du jeton
@@ -94,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // (risque de blocage) : on diffère l'appel.
         window.setTimeout(() => {
           void fetchProfile(userId).finally(() => {
-            if (active) setLoading(false);
+            if (active && currentUserId.current === userId) setLoading(false);
           });
         }, 0);
       } else {
@@ -162,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setProfile(null);
     loadedProfileUserId.current = null;
+    currentUserId.current = null;
   };
 
   return (

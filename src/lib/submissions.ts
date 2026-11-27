@@ -34,38 +34,60 @@ export async function createThumbnail(file: File, maxWidth = 480): Promise<Blob 
 }
 
 /** Crée des URL signées (1 h) pour les chemins du bucket « submissions ». */
-export async function signSubmissionPaths(paths: string[]): Promise<Record<string, string>> {
+export async function signSubmissionPaths(
+  paths: string[]
+): Promise<{ urls: Record<string, string>; failed: number }> {
   const unique = Array.from(new Set(paths.filter(isStoragePath)));
-  if (unique.length === 0) return {};
+  if (unique.length === 0) return { urls: {}, failed: 0 };
 
   const { data, error } = await supabase.storage
     .from(SUBMISSIONS_BUCKET)
     .createSignedUrls(unique, 3600);
 
-  if (error || !data) return {};
+  if (error || !data) return { urls: {}, failed: unique.length };
 
-  const map: Record<string, string> = {};
+  const urls: Record<string, string> = {};
   for (const item of data) {
-    if (item.path && item.signedUrl) map[item.path] = item.signedUrl;
+    if (item.path && item.signedUrl) urls[item.path] = item.signedUrl;
   }
-  return map;
+  return { urls, failed: unique.length - Object.keys(urls).length };
+}
+
+export interface PublishedFile {
+  /** Chemin dans le bucket public « pancartes » */
+  path: string;
+  publicUrl: string;
 }
 
 /**
  * Copie un fichier du bucket privé « submissions » vers le bucket public
  * « pancartes » (réservé aux administrateurs) et renvoie son URL publique.
  */
-export async function publishSubmissionFile(path: string): Promise<string> {
+export async function publishSubmissionFile(path: string): Promise<PublishedFile> {
   const destination = `submissions/${path}`;
   const { error } = await supabase.storage
     .from(SUBMISSIONS_BUCKET)
     .copy(path, destination, { destinationBucket: PUBLIC_BUCKET });
 
-  // Fichier déjà copié lors d'une tentative précédente : on le réutilise
-  if (error && !/exist/i.test(error.message)) {
-    throw new Error(`Copie de l'image impossible : ${error.message}`);
+  if (error) {
+    // Seul cas accepté : la copie existe déjà (tentative précédente interrompue).
+    // On le vérifie dans le bucket public avant de la réutiliser.
+    const folder = destination.slice(0, destination.lastIndexOf('/'));
+    const fileName = destination.slice(destination.lastIndexOf('/') + 1);
+    const { data: existing } = await supabase.storage
+      .from(PUBLIC_BUCKET)
+      .list(folder, { search: fileName, limit: 10 });
+    if (!existing?.some((f) => f.name === fileName)) {
+      throw new Error(`Copie de l'image impossible : ${error.message}`);
+    }
   }
 
   const { data } = supabase.storage.from(PUBLIC_BUCKET).getPublicUrl(destination);
-  return data.publicUrl;
+  return { path: destination, publicUrl: data.publicUrl };
+}
+
+/** Supprime des copies publiques (si la modération échoue après la copie). */
+export async function removePublishedFiles(paths: string[]): Promise<void> {
+  if (paths.length === 0) return;
+  await supabase.storage.from(PUBLIC_BUCKET).remove(paths);
 }

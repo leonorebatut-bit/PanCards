@@ -111,6 +111,14 @@ DROP POLICY IF EXISTS "Création et édition de ses commentaires" ON public.comm
 
 -- S1 : la vue respecte désormais les règles RLS de l'utilisateur
 ALTER VIEW public.card_rating_stats SET (security_invoker = true);
+-- Vue non utilisée par le site : la moyenne collective passe par
+-- get_card_rating_summary. On la retire de l'API pour éviter des chiffres
+-- partiels (la RLS ne laisse voir que ses propres votes).
+REVOKE SELECT ON public.card_rating_stats FROM anon, authenticated;
+
+-- I12 : la vitrine ne s'écrit plus que via set_user_showcase, qui vérifie
+-- que les cartes exposées sont bien possédées.
+DROP POLICY IF EXISTS "Gestion de sa propre vitrine" ON public.user_showcase;
 
 -- ----------------------------------------------------------------------------
 -- 3. Fonctions utilitaires internes (non appelables depuis l'API)
@@ -270,11 +278,8 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_uid UUID := auth.uid();
+  v_uid UUID := public._require_active_user();
 BEGIN
-  IF v_uid IS NULL THEN
-    RAISE EXCEPTION 'Connexion requise.';
-  END IF;
   RETURN QUERY SELECT * FROM public._sync_boosters(v_uid);
 END;
 $$;
@@ -362,12 +367,13 @@ AS $$
 DECLARE
   v_uid UUID := public._require_active_user();
   v_cost INTEGER := GREATEST(public._game_setting('booster_cost', 200), 0);
+  v_max INTEGER := LEAST(GREATEST(public._game_setting('booster_max_stock', 8), 0), 8);
   v_sync RECORD;
 BEGIN
   SELECT * INTO v_sync FROM public._sync_boosters(v_uid);
 
-  IF v_sync.boosters_available >= 8 THEN
-    RAISE EXCEPTION 'Ton stock de boosters est plein (8 maximum).';
+  IF v_sync.boosters_available >= v_max THEN
+    RAISE EXCEPTION 'Ton stock de boosters est plein (% maximum).', v_max;
   END IF;
   IF v_sync.poubelles_balance < v_cost THEN
     RAISE EXCEPTION 'Il te faut % poubelles pour acheter un booster.', v_cost;
@@ -400,6 +406,10 @@ BEGIN
   IF p_user_card_ids IS NULL OR array_length(p_user_card_ids, 1) IS NULL THEN
     RAISE EXCEPTION 'Aucun exemplaire sélectionné.';
   END IF;
+
+  -- Verrou sur le profil : deux défausses simultanées du même joueur
+  -- s'exécutent l'une après l'autre (sinon le dernier exemplaire pourrait partir)
+  PERFORM 1 FROM public.profiles WHERE id = v_uid FOR UPDATE;
 
   FOR v_copy IN
     SELECT uc.id, uc.card_id
@@ -614,6 +624,7 @@ $$;
 -- bucket public « pancartes » et moderate_pancarte enregistre les URL publiques.
 
 ALTER TABLE public.cards ALTER COLUMN published_at DROP DEFAULT;
+UPDATE public.cards SET published_at = NULL WHERE status <> 'published';
 
 CREATE OR REPLACE FUNCTION public.submit_new_pancarte(
   p_original_filename TEXT,
@@ -643,6 +654,15 @@ BEGIN
      OR split_part(p_thumb_url, '/', 1) <> v_uid::text THEN
     RAISE EXCEPTION 'Chemin de fichier invalide.';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM storage.objects o WHERE o.bucket_id = 'submissions' AND o.name = p_image_url)
+     OR NOT EXISTS (SELECT 1 FROM storage.objects o WHERE o.bucket_id = 'submissions' AND o.name = p_thumb_url) THEN
+    RAISE EXCEPTION 'Fichier envoyé introuvable : recommence l''envoi.';
+  END IF;
+
+  -- Sérialise les propositions d'un même joueur (limite des 20 en attente)
+  -- et celles portant le même nom de fichier (unicité de original_filename)
+  PERFORM 1 FROM public.profiles WHERE id = v_uid FOR UPDATE;
+  PERFORM pg_advisory_xact_lock(hashtext('pancards.filename.' || lower(v_base)));
   IF (SELECT count(*) FROM public.cards c WHERE c.uploaded_by = v_uid AND c.status = 'pending') >= 20 THEN
     RAISE EXCEPTION 'Tu as déjà 20 propositions en attente de validation.';
   END IF;
@@ -685,10 +705,11 @@ DECLARE
   v_card public.cards%ROWTYPE;
   v_reward INTEGER := GREATEST(public._game_setting('upload_approved_reward', 100), 0);
 BEGIN
+  PERFORM public._require_active_user();
   IF NOT public.is_current_user_admin() THEN
     RAISE EXCEPTION 'Action réservée aux administrateurs.';
   END IF;
-  IF p_decision NOT IN ('published', 'rejected') THEN
+  IF p_decision IS NULL OR p_decision NOT IN ('published', 'rejected') THEN
     RAISE EXCEPTION 'Décision inconnue : %', p_decision;
   END IF;
 
@@ -782,6 +803,20 @@ SET public = true,
     allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif']
 WHERE id = 'avatars';
 
+-- Vrai si l'appelant a un profil non suspendu (utilisé par les règles de stockage)
+CREATE OR REPLACE FUNCTION public.is_current_user_active()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COALESCE(
+    (SELECT NOT is_suspended FROM public.profiles WHERE id = auth.uid()),
+    false
+  );
+$$;
+
 -- submissions : chacun écrit et lit dans son propre dossier ; l'admin lit tout
 DROP POLICY IF EXISTS "Upload des soumissions par utilisateurs connectés" ON storage.objects;
 DROP POLICY IF EXISTS "Soumissions : envoi dans son dossier" ON storage.objects;
@@ -793,6 +828,7 @@ CREATE POLICY "Soumissions : envoi dans son dossier"
   WITH CHECK (
     bucket_id = 'submissions'
     AND (storage.foldername(name))[1] = auth.uid()::text
+    AND public.is_current_user_active()
   );
 
 CREATE POLICY "Soumissions : lecture auteur ou admin"
@@ -835,11 +871,19 @@ CREATE POLICY "Avatars : lecture publique"
 
 CREATE POLICY "Avatars : envoi dans son dossier"
   ON storage.objects FOR INSERT TO authenticated
-  WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
+  WITH CHECK (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+    AND public.is_current_user_active()
+  );
 
 CREATE POLICY "Avatars : remplacement dans son dossier"
   ON storage.objects FOR UPDATE TO authenticated
-  USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
+  USING (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+    AND public.is_current_user_active()
+  );
 
 CREATE POLICY "Avatars : suppression dans son dossier"
   ON storage.objects FOR DELETE TO authenticated

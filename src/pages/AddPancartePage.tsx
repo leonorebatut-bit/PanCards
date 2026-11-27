@@ -8,7 +8,9 @@ import {
   createThumbnail,
   isStoragePath,
   publishSubmissionFile,
+  removePublishedFiles,
   signSubmissionPaths,
+  type PublishedFile,
 } from '../lib/submissions';
 
 const STATUS_LABELS: Record<Card['status'], string> = {
@@ -60,7 +62,13 @@ export function AddPancartePage() {
     setPendingQueue(queue);
 
     const paths = [...mineList, ...queue].flatMap((c) => [c.image_url, c.thumb_url]);
-    setSignedUrls(await signSubmissionPaths(paths));
+    const signed = await signSubmissionPaths(paths);
+    setSignedUrls(signed.urls);
+    if (signed.failed > 0) {
+      setErrorMsg(
+        `Impossible d’afficher ${signed.failed} image(s) en attente. Recharge la page pour réessayer.`
+      );
+    }
   }, [user, profile?.is_admin]);
 
   useEffect(() => {
@@ -120,6 +128,9 @@ export function AddPancartePage() {
       });
 
       if (rpcErr) {
+        // Pas de carte créée : on retire les fichiers envoyés
+        const uploaded = thumbPath === imagePath ? [imagePath] : [imagePath, thumbPath];
+        await supabase.storage.from(SUBMISSIONS_BUCKET).remove(uploaded);
         throw new Error(rpcErr.message);
       }
 
@@ -145,21 +156,32 @@ export function AddPancartePage() {
 
     let publicImageUrl: string | null = null;
     let publicThumbUrl: string | null = null;
+    // Copies publiques créées ici, à retirer si la modération échoue
+    const copies: PublishedFile[] = [];
 
     try {
       if (decision === 'published') {
         // Copie des fichiers du bucket privé vers le bucket public
-        publicImageUrl = isStoragePath(item.image_url)
-          ? await publishSubmissionFile(item.image_url)
-          : item.image_url;
-        publicThumbUrl =
-          item.thumb_url === item.image_url
-            ? publicImageUrl
-            : isStoragePath(item.thumb_url)
-            ? await publishSubmissionFile(item.thumb_url)
-            : item.thumb_url;
+        if (isStoragePath(item.image_url)) {
+          const copy = await publishSubmissionFile(item.image_url);
+          copies.push(copy);
+          publicImageUrl = copy.publicUrl;
+        } else {
+          publicImageUrl = item.image_url;
+        }
+
+        if (item.thumb_url === item.image_url) {
+          publicThumbUrl = publicImageUrl;
+        } else if (isStoragePath(item.thumb_url)) {
+          const copy = await publishSubmissionFile(item.thumb_url);
+          copies.push(copy);
+          publicThumbUrl = copy.publicUrl;
+        } else {
+          publicThumbUrl = item.thumb_url;
+        }
       }
     } catch (err) {
+      await removePublishedFiles(copies.map((c) => c.path));
       setErrorMsg(err instanceof Error ? err.message : String(err));
       setModeratingId(null);
       return;
@@ -174,6 +196,7 @@ export function AddPancartePage() {
     setModeratingId(null);
 
     if (error) {
+      await removePublishedFiles(copies.map((c) => c.path));
       setErrorMsg(error.message);
     } else {
       setFeedback(
