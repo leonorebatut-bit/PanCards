@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import type { Card, ShowcaseItem } from '../types/database';
 
 export function ProfilePage() {
-  const { user, profile, loading, signIn, signUp, signOut, refreshProfile } =
+  const { user, profile, loading, signIn, signUp, signOut, refreshProfile, profileError } =
     useAuth();
 
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -185,6 +185,11 @@ export function ProfilePage() {
           Tu es connecté·e, mais ton profil de joueur n&apos;a pas pu être chargé.
           Réessaie dans un instant ou déconnecte-toi puis reconnecte-toi.
         </p>
+        {profileError && (
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
+            Détail technique : {profileError}
+          </p>
+        )}
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button type="button" className="btn-secondary" onClick={() => void refreshProfile()}>
             Réessayer
@@ -200,7 +205,7 @@ export function ProfilePage() {
   if (!user || !profile) {
     return (
       <div className="panel-box" style={{ maxWidth: '520px', margin: '0 auto' }}>
-        <span className="hero-kicker">PHASE 2 · AUTHENTIFICATION</span>
+        <span className="hero-kicker">🎮 PRÊT·E À JOUER ?</span>
         <h2 className="hero-headline" style={{ fontSize: '1.7rem' }}>
           {authMode === 'login' ? 'Connexion' : 'Créer un compte'}
         </h2>

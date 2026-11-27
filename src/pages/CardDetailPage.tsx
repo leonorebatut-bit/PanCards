@@ -201,7 +201,7 @@ export function CardDetailPage() {
 
         <div>
           <span className="hero-kicker">
-            ARCHIVE N° {String(card.id).padStart(4, '0')} · {card.status.toUpperCase()}
+            CARTE N° {String(card.id).padStart(4, '0')} · {card.status.toUpperCase()}
           </span>
           <h2
             className="hero-headline"
