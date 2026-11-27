@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -210,8 +210,14 @@ export function TradesPage() {
   const [requested, setRequested] = useState<string[]>([]);
   const [message, setMessage] = useState('');
 
-  const loadTrades = useCallback(async () => {
+  // Compte actuellement affiché : une réponse arrivée après un changement de
+  // compte est ignorée (elle ne doit pas s'afficher pour l'autre joueur)
+  const currentUid = useRef<string | null>(null);
+  currentUid.current = user?.id ?? null;
+
+  const loadTrades = useCallback(async (uid: string) => {
     const { data, error: err } = await supabase.rpc('get_my_trades');
+    if (currentUid.current !== uid) return;
     if (err) {
       setError(errorText(err));
       return;
@@ -220,14 +226,24 @@ export function TradesPage() {
   }, []);
 
   const loadMyCopies = useCallback(async (uid: string) => {
-    const { data } = await supabase
+    const { data, error: err } = await supabase
       .from('user_cards')
       .select('id, card_id, card:cards(id, thumb_url, description)')
       .eq('user_id', uid);
+    if (currentUid.current !== uid) return;
+    if (err) {
+      setError(`Impossible de charger ta collection : ${err.message}`);
+      return;
+    }
     setMyCopies((data as unknown as OwnedCopy[] | null) ?? []);
   }, []);
 
   useEffect(() => {
+    setTrades([]);
+    setMyCopies([]);
+    setPlayers([]);
+    setError(null);
+    setNotice(null);
     if (!user?.id) {
       if (!authLoading) setLoading(false);
       return;
@@ -236,7 +252,7 @@ export function TradesPage() {
     async function loadAll() {
       setLoading(true);
       const [, , playersRes] = await Promise.all([
-        loadTrades(),
+        loadTrades(uid),
         loadMyCopies(uid),
         supabase
           .from('profiles')
@@ -245,7 +261,12 @@ export function TradesPage() {
           .eq('is_suspended', false)
           .order('username', { ascending: true }),
       ]);
-      setPlayers((playersRes.data as Profile[] | null) ?? []);
+      if (currentUid.current !== uid) return;
+      if (playersRes.error) {
+        setError(`Impossible de charger la liste des joueurs : ${playersRes.error.message}`);
+      } else {
+        setPlayers((playersRes.data as Profile[] | null) ?? []);
+      }
       setLoading(false);
     }
     void loadAll();
@@ -258,14 +279,25 @@ export function TradesPage() {
     setRequested([]);
     setPartnerCopies([]);
     if (!partner || !partner.is_public) return;
+    const wantedId = partner.id;
+    let stale = false;
     async function loadPartner() {
-      const { data } = await supabase
+      const { data, error: err } = await supabase
         .from('user_cards')
         .select('id, card_id, card:cards(id, thumb_url, description)')
-        .eq('user_id', partner!.id);
+        .eq('user_id', wantedId);
+      // Un autre joueur a été choisi entre-temps : on ignore cette réponse
+      if (stale) return;
+      if (err) {
+        setError(`Impossible de charger les cartes de ce joueur : ${err.message}`);
+        return;
+      }
       setPartnerCopies((data as unknown as OwnedCopy[] | null) ?? []);
     }
     void loadPartner();
+    return () => {
+      stale = true;
+    };
   }, [partner?.id, partner?.is_public]);
 
   const myGroups = useMemo(() => groupCopies(myCopies), [myCopies]);
@@ -307,7 +339,7 @@ export function TradesPage() {
     setOffered([]);
     setRequested([]);
     setMessage('');
-    await loadTrades();
+    if (user) await loadTrades(user.id);
     setTab('sent');
   }
 
@@ -329,7 +361,7 @@ export function TradesPage() {
     } else {
       setNotice('Proposition refusée.');
     }
-    await Promise.all([loadTrades(), user ? loadMyCopies(user.id) : Promise.resolve()]);
+    if (user) await Promise.all([loadTrades(user.id), loadMyCopies(user.id)]);
   }
 
   async function cancel(trade: TradeView) {
@@ -340,7 +372,7 @@ export function TradesPage() {
     setBusy(false);
     if (err) setError(errorText(err));
     else setNotice('Proposition annulée.');
-    await loadTrades();
+    if (user) await loadTrades(user.id);
   }
 
   if (authLoading || loading) return <p>Chargement des échanges...</p>;
