@@ -173,6 +173,28 @@ export function ProfilePage() {
     return <p>Chargement du compte...</p>;
   }
 
+  if (user && !profile) {
+    return (
+      <div className="panel-box" style={{ maxWidth: '520px', margin: '0 auto' }}>
+        <h2 className="hero-headline" style={{ fontSize: '1.7rem' }}>
+          Profil introuvable
+        </h2>
+        <p>
+          Tu es connecté·e, mais ton profil de joueur n&apos;a pas pu être chargé.
+          Réessaie dans un instant ou déconnecte-toi puis reconnecte-toi.
+        </p>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button type="button" className="btn-secondary" onClick={() => void refreshProfile()}>
+            Réessayer
+          </button>
+          <button type="button" className="btn-danger" onClick={signOut}>
+            Déconnexion
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!user || !profile) {
     return (
       <div className="panel-box" style={{ maxWidth: '520px', margin: '0 auto' }}>

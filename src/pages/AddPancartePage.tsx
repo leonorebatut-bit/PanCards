@@ -3,6 +3,19 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { Card } from '../types/database';
+import {
+  SUBMISSIONS_BUCKET,
+  createThumbnail,
+  isStoragePath,
+  publishSubmissionFile,
+  signSubmissionPaths,
+} from '../lib/submissions';
+
+const STATUS_LABELS: Record<Card['status'], string> = {
+  pending: 'EN ATTENTE',
+  published: 'PUBLIÉE',
+  rejected: 'REFUSÉE',
+};
 
 export function AddPancartePage() {
   const { user, profile, loading: authLoading, refreshProfile } = useAuth();
@@ -16,6 +29,12 @@ export function AddPancartePage() {
 
   const [mySubmissions, setMySubmissions] = useState<Card[]>([]);
   const [pendingQueue, setPendingQueue] = useState<Card[]>([]);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [moderatingId, setModeratingId] = useState<number | null>(null);
+
+  // Image affichable : URL publique, ou URL signée pour une proposition en attente
+  const displayUrl = (value: string) =>
+    isStoragePath(value) ? signedUrls[value] ?? '' : value;
 
   const loadSubmissions = useCallback(async () => {
     if (!user) return;
@@ -26,16 +45,22 @@ export function AddPancartePage() {
       .eq('uploaded_by', user.id)
       .order('created_at', { ascending: false });
 
-    setMySubmissions((mine as Card[]) ?? []);
+    const mineList = (mine as Card[]) ?? [];
+    setMySubmissions(mineList);
 
+    let queue: Card[] = [];
     if (profile?.is_admin) {
       const { data: pending } = await supabase
         .from('cards')
         .select('*')
         .eq('status', 'pending')
         .order('created_at', { ascending: true });
-      setPendingQueue((pending as Card[]) ?? []);
+      queue = (pending as Card[]) ?? [];
     }
+    setPendingQueue(queue);
+
+    const paths = [...mineList, ...queue].flatMap((c) => [c.image_url, c.thumb_url]);
+    setSignedUrls(await signSubmissionPaths(paths));
   }, [user, profile?.is_admin]);
 
   useEffect(() => {
@@ -51,13 +76,22 @@ export function AddPancartePage() {
     setSubmitting(true);
 
     try {
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const safeName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-      const storagePath = `submissions/${user.id}/${safeName}.${ext}`;
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error('L’image dépasse la taille maximale de 10 Mo.');
+      }
+
+      const dotIndex = file.name.lastIndexOf('.');
+      const ext = dotIndex > 0 ? file.name.slice(dotIndex + 1).toLowerCase() : 'jpg';
+      const baseName = (dotIndex > 0 ? file.name.slice(0, dotIndex) : file.name)
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
+        .slice(0, 80);
+      // Le premier dossier doit être l'id de l'utilisateur (règle du bucket privé)
+      const stem = `${user.id}/${Date.now()}_${baseName}`;
+      const imagePath = `${stem}.${ext}`;
 
       const { error: upErr } = await supabase.storage
-        .from('pancartes')
-        .upload(storagePath, file, {
+        .from(SUBMISSIONS_BUCKET)
+        .upload(imagePath, file, {
           contentType: file.type || 'image/jpeg',
           upsert: false,
         });
@@ -66,14 +100,21 @@ export function AddPancartePage() {
         throw new Error(`Échec de l’envoi de l’image : ${upErr.message}`);
       }
 
-      const { data: urlData } = supabase.storage
-        .from('pancartes')
-        .getPublicUrl(storagePath);
+      // Miniature générée dans le navigateur ; à défaut, on réutilise l'original
+      let thumbPath = imagePath;
+      const thumbBlob = await createThumbnail(file);
+      if (thumbBlob) {
+        const candidate = `${stem}_thumb.jpg`;
+        const { error: thumbErr } = await supabase.storage
+          .from(SUBMISSIONS_BUCKET)
+          .upload(candidate, thumbBlob, { contentType: 'image/jpeg', upsert: false });
+        if (!thumbErr) thumbPath = candidate;
+      }
 
       const { error: rpcErr } = await supabase.rpc('submit_new_pancarte', {
         p_original_filename: file.name,
-        p_image_url: urlData.publicUrl,
-        p_thumb_url: urlData.publicUrl,
+        p_image_url: imagePath,
+        p_thumb_url: thumbPath,
         p_description: description.trim() || null,
         p_extra_info: extraInfo.trim() || null,
       });
@@ -96,14 +137,41 @@ export function AddPancartePage() {
     }
   };
 
-  const handleModerate = async (cardId: number, decision: 'published' | 'rejected') => {
+  const handleModerate = async (item: Card, decision: 'published' | 'rejected') => {
+    const cardId = item.id;
     setErrorMsg(null);
     setFeedback(null);
+    setModeratingId(cardId);
+
+    let publicImageUrl: string | null = null;
+    let publicThumbUrl: string | null = null;
+
+    try {
+      if (decision === 'published') {
+        // Copie des fichiers du bucket privé vers le bucket public
+        publicImageUrl = isStoragePath(item.image_url)
+          ? await publishSubmissionFile(item.image_url)
+          : item.image_url;
+        publicThumbUrl =
+          item.thumb_url === item.image_url
+            ? publicImageUrl
+            : isStoragePath(item.thumb_url)
+            ? await publishSubmissionFile(item.thumb_url)
+            : item.thumb_url;
+      }
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : String(err));
+      setModeratingId(null);
+      return;
+    }
 
     const { error } = await supabase.rpc('moderate_pancarte', {
       p_card_id: cardId,
       p_decision: decision,
+      p_image_url: publicImageUrl,
+      p_thumb_url: publicThumbUrl,
     });
+    setModeratingId(null);
 
     if (error) {
       setErrorMsg(error.message);
@@ -218,7 +286,7 @@ export function AddPancartePage() {
                   </div>
                   <div className="pancarte-card-img-wrap">
                     <img
-                      src={item.image_url}
+                      src={displayUrl(item.image_url)}
                       alt={item.original_filename}
                       className="pancarte-card-img"
                     />
@@ -239,14 +307,16 @@ export function AddPancartePage() {
                       <button
                         type="button"
                         className="btn-primary"
-                        onClick={() => handleModerate(item.id, 'published')}
+                        disabled={moderatingId !== null}
+                        onClick={() => handleModerate(item, 'published')}
                       >
                         Valider (+100)
                       </button>
                       <button
                         type="button"
                         className="btn-danger"
-                        onClick={() => handleModerate(item.id, 'rejected')}
+                        disabled={moderatingId !== null}
+                        onClick={() => handleModerate(item, 'rejected')}
                       >
                         Rejeter
                       </button>
@@ -272,11 +342,11 @@ export function AddPancartePage() {
               <article key={item.id} className="pancarte-card">
                 <div className="pancarte-card-top">
                   <span>N° {item.id}</span>
-                  <span className="badge-unique">{item.status.toUpperCase()}</span>
+                  <span className="badge-unique">{STATUS_LABELS[item.status]}</span>
                 </div>
                 <div className="pancarte-card-img-wrap">
                   <img
-                    src={item.thumb_url}
+                    src={displayUrl(item.thumb_url)}
                     alt={item.original_filename}
                     className="pancarte-card-img"
                   />

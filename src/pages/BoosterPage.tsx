@@ -267,7 +267,7 @@ export function BoosterPage() {
 
                   <div className="pancarte-card-img-wrap">
                     <img
-                      src={item.image_url}
+                      src={item.thumb_url}
                       alt={item.original_filename}
                       className="pancarte-card-img"
                     />

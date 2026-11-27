@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const loadedProfileUserId = useRef<string | null>(null);
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
@@ -45,8 +47,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!error && data) {
       setProfile(data as Profile);
+      loadedProfileUserId.current = userId;
     } else {
       setProfile(null);
+      loadedProfileUserId.current = null;
     }
   }, []);
 
@@ -74,16 +78,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!active) return;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       if (nextSession?.user) {
-        void fetchProfile(nextSession.user.id);
+        const userId = nextSession.user.id;
+        // Le profil ne change pas lors d'un simple rafraîchissement du jeton
+        if (event === 'TOKEN_REFRESHED') return;
+        // Nouvel utilisateur (connexion) : on garde l'état « chargement » tant
+        // que le profil n'est pas arrivé, pour éviter d'afficher « Connexion
+        // requise ». Même utilisateur : rafraîchissement silencieux.
+        if (loadedProfileUserId.current !== userId) setLoading(true);
+        // Supabase déconseille d'appeler l'API directement dans ce callback
+        // (risque de blocage) : on diffère l'appel.
+        window.setTimeout(() => {
+          void fetchProfile(userId).finally(() => {
+            if (active) setLoading(false);
+          });
+        }, 0);
       } else {
         setProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {
@@ -144,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
+    loadedProfileUserId.current = null;
   };
 
   return (
