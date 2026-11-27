@@ -231,15 +231,9 @@ export function AddPancartePage() {
       {feedback && <div className="alert-ok">{feedback}</div>}
 
       <section className="panel-box">
-        <span className="hero-kicker">CONTRIBUTION · +100 POUBELLES À LA VALIDATION</span>
         <h2 className="hero-headline" style={{ fontSize: '1.8rem' }}>
           Ajouter ma pancarte
         </h2>
-        <p>
-          Propose une photographie de pancarte. Elle restera en attente jusqu&apos;à
-          validation par un administrateur avant de rejoindre le catalogue et les
-          boosters.
-        </p>
 
         <form onSubmit={handleSubmit}>
           <div className="field-group">

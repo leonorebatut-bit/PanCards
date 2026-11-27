@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { Icon } from '../components/Icon';
 import type { Card, CardComment, CardRatingSummary } from '../types/database';
 
 export function CardDetailPage() {
@@ -269,16 +270,17 @@ export function CardDetailPage() {
               borderTop: '2px solid var(--color-black)',
             }}
           >
-            <div className="field-label">Évaluation communautaire</div>
-            <p style={{ margin: '0.35rem 0 0.75rem', fontFamily: 'var(--font-mono)', fontSize: '0.86rem' }}>
-              {ratingSummary.is_public_average && ratingSummary.average_stars !== null
-                ? `Note moyenne : ★ ${Number(ratingSummary.average_stars).toFixed(2)} / 5 (${ratingSummary.vote_count} votes)`
-                : `Moyenne masquée tant que 6 votes ne sont pas atteints (${ratingSummary.vote_count} / 6 votes)`}
-            </p>
+            <div className="field-label">Note</div>
+            {ratingSummary.is_public_average && ratingSummary.average_stars !== null && (
+              <p style={{ margin: '0.35rem 0 0.75rem', fontFamily: 'var(--font-mono)', fontSize: '0.86rem' }}>
+                Moyenne {Number(ratingSummary.average_stars).toFixed(1)} / 5 ·{' '}
+                {ratingSummary.vote_count} votes
+              </p>
+            )}
 
             {user ? (
               <div>
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <div className="star-row" role="group" aria-label="Ta note">
                   {[1, 2, 3, 4, 5].map((star) => {
                     const active = (ratingSummary.user_stars ?? 0) >= star;
                     return (
@@ -286,26 +288,23 @@ export function CardDetailPage() {
                         key={star}
                         type="button"
                         disabled={ratingBusy}
-                        className={active ? 'btn-primary' : 'btn-secondary'}
+                        className={active ? 'star-btn active' : 'star-btn'}
+                        aria-label={`${star} sur 5`}
+                        aria-pressed={active}
                         onClick={() => handleRate(star)}
                       >
-                        {star} ★
+                        <Icon name="star" size={26} filled={active} />
                       </button>
                     );
                   })}
                 </div>
-                <small style={{ display: 'block', marginTop: '0.4rem', fontFamily: 'var(--font-mono)' }}>
-                  {ratingSummary.user_stars
-                    ? `Ton vote actuel : ${ratingSummary.user_stars}/5`
-                    : '+1 poubelle offerte lors de ton premier vote sur cette pancarte.'}
-                </small>
               </div>
             ) : (
               <p style={{ fontSize: '0.88rem' }}>
                 <Link to="/profil" style={{ textDecoration: 'underline' }}>
                   Connecte-toi
                 </Link>{' '}
-                pour attribuer une note de 1 à 5 étoiles.
+                pour noter cette carte.
               </p>
             )}
           </div>
@@ -318,21 +317,19 @@ export function CardDetailPage() {
           <h3 className="section-title">
             Légendes &amp; commentaires ({comments.length})
           </h3>
-          <span className="section-meta">+1 poubelle au 1er commentaire</span>
         </div>
 
         {user ? (
           <form onSubmit={handleAddComment} style={{ marginBottom: '1.5rem' }}>
             <div className="field-group">
               <label className="field-label" htmlFor="comment-box">
-                Ajouter une légende, un contexte ou une réaction
+                Ta légende ou ton commentaire
               </label>
               <textarea
                 id="comment-box"
                 className="field-textarea"
                 maxLength={1000}
                 required
-                placeholder="Lieu, cortège, lecture du slogan, contexte historique..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
               />
@@ -349,7 +346,7 @@ export function CardDetailPage() {
                   checked={newCommentPublic}
                   onChange={() => setNewCommentPublic(true)}
                 />
-                🌍 Public (visible par tous)
+                <Icon name="globe" /> Public
               </label>
               <label style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', cursor: 'pointer' }}>
                 <input
@@ -358,7 +355,7 @@ export function CardDetailPage() {
                   checked={!newCommentPublic}
                   onChange={() => setNewCommentPublic(false)}
                 />
-                🔒 Privé (visible par toi seul·e)
+                <Icon name="lock" /> Privé
               </label>
             </div>
             <button type="submit" className="btn-primary" disabled={commentBusy}>
@@ -409,7 +406,11 @@ export function CardDetailPage() {
                       @{c.author?.username ?? 'membre'}
                     </Link>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                      {!c.is_public && <span className="badge-unique">🔒 PRIVÉ</span>}
+                      {!c.is_public && (
+                        <span className="badge-unique">
+                          <Icon name="lock" size={12} /> PRIVÉ
+                        </span>
+                      )}
                       <span>{new Date(c.created_at).toLocaleString('fr-FR')}</span>
                       {isMine && (
                         <button

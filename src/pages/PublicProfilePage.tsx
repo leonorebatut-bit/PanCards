@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Icon } from '../components/Icon';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -121,7 +122,7 @@ export function PublicProfilePage() {
             className="btn-primary"
             style={{ display: 'inline-block', marginTop: '1rem' }}
           >
-            🔄 Proposer un échange
+            <Icon name="swap" /> Proposer un échange
           </Link>
         )}
       </section>

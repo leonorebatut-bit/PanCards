@@ -33,7 +33,7 @@ pan-cards/
 
 
 
-        # PAN-CARDS
+        # PanCards
 
 Archive photographique collaborative de pancartes de manifestations transformée en jeu de cartes à collectionner.
 

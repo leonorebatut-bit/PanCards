@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { Icon } from '../components/Icon';
 import type {
   Card,
   CollectionCardLink,
@@ -616,9 +617,11 @@ export function CollectionPage() {
                       marginBottom: '0.35rem',
                     }}
                   >
-                    {entry.personalRating !== null
-                      ? `★ ${entry.personalRating}/5`
-                      : 'Pas encore notée'}
+                    {entry.personalRating !== null && (
+                      <>
+                        <Icon name="star" size={12} filled /> {entry.personalRating}/5
+                      </>
+                    )}
                   </div>
 
                   {selectedFolderId !== 'all' &&
