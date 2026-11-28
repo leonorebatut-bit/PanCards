@@ -1,0 +1,9 @@
+torch
+torchvision
+transformers>=4.49
+accelerate
+pillow
+pillow-avif-plugin
+opencv-python-headless
+huggingface_hub
+numpy
