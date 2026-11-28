@@ -18,7 +18,18 @@ export function CardTile({ card }: { card: Card }) {
       </div>
       {card.description && (
         <div className="pancarte-card-body">
-          <p style={{ margin: 0, fontSize: '0.85rem' }}>{card.description}</p>
+          <p
+            style={{
+              margin: 0,
+              fontSize: '0.85rem',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {card.description}
+          </p>
         </div>
       )}
     </Link>
