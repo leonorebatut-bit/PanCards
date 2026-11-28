@@ -125,10 +125,15 @@ def main():
             msgs = [{"role": "user", "content": [{"type": "image"}, {"type": "text", "text": PROMPT}]}]
             text = processor.apply_chat_template(msgs, add_generation_prompt=True)
             inputs = processor(text=[text], images=[load_image(os.path.join(img_dir, fname))], return_tensors="pt")
-            with torch.no_grad():
-                out = model.generate(**inputs, max_new_tokens=500, do_sample=False)
-            answer = processor.batch_decode(out[:, inputs["input_ids"].shape[1]:], skip_special_tokens=True)[0]
-            d = parse_json(answer)
+            d = None
+            # 2e essai avec une pénalité de répétition : le modèle boucle parfois sur une ligne
+            for penalite in (1.0, 1.3):
+                with torch.no_grad():
+                    out = model.generate(**inputs, max_new_tokens=600, do_sample=False, repetition_penalty=penalite)
+                answer = processor.batch_decode(out[:, inputs["input_ids"].shape[1]:], skip_special_tokens=True)[0]
+                d = parse_json(answer)
+                if d is not None:
+                    break
             if d is None:
                 print(f"{fname}: réponse non JSON, texte brut gardé", flush=True)
                 d = {"texte_pancarte": answer.strip()[:500]}
