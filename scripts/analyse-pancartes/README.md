@@ -30,6 +30,9 @@ ne sont que des estimations d'après l'apparence : elles sont souvent fausses,
 ne disent rien de l'identité réelle des personnes, et doivent rester un
 indicateur statistique grossier, jamais une information affichée sur le site.
 
+Un 2e passage, `noter_travail.py`, affine la colonne `niveau_travail_1a5`
+(dans la grande question, le modèle mettait presque toujours 4).
+
 Relancer : `python analyse.py <dossier_photos> data/pancartes_legendes.csv`
 (le script reprend là où il s'est arrêté).
 
